@@ -28,13 +28,12 @@ var PostEntry = db.Model.extend(
       commentsSorted:function(offset,limit) {
          offset = offset || 0;
          limit = limit || 10;
-         //let communityId = this.get('community_id');
+   
          return this.related("comments").query(function(q){q.orderBy("creation_date_time", "desc").offset(offset).limit(limit)}).fetch();
       },
 
       postedByUser: function() {
          return this.belongsTo(db.model('User'), 'posted_by_user_id'); 
-         //return this.hasOne(User, 'posted_by_user_id'); 
       },
       subPosts: function() {
          return this.hasMany(db.model('SubPostEntry'), 'post_entry_id'); // THIS WAS THE MAGIC!! Needed this parameter at the end.

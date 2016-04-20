@@ -13,6 +13,7 @@ require('./calendar');
 require('./community_user');
 require('./discussion');
 require('./discussion_category');
+require('./discussion_comment');
 require('./page');
 require('./post_entry');
 require('./post_entry_comment');
@@ -70,19 +71,6 @@ let Community = db.Model.extend(
              q.join('post_entry', 'post_entry.post_entry_id', '=', 'post_entry_comment.post_entry_id');
              q.where({'post_entry.community_id':communityId})
           })
-
-          /*
-          return new Promise( function (resolve,reject) {
-              PostEntryComment.collection().query(function(q) {
-                  q.join('post_entry', 'post_entry.post_entry_id', '=', 'post_entry_comment.post_entry_id');
-                  q.where({'post_entry.community_id':communityId})
-              }).fetch().then(function(comments) {
-                  return resolve(comments); //.toJSON());
-              }).catch(function(err) {
-                  return reject(err);
-              });
-          });
-*/
       },
 
       postCommentsSorted:function(offset,limit) {
@@ -105,6 +93,21 @@ let Community = db.Model.extend(
          limit = limit || 10;
          let communityId = this.get('community_id');
          return this.related("discussions").query(function(q){q.where('community_id', '=', communityId ).orderBy("creation_date_time", "desc").offset(offset).limit(limit)}).fetch();
+      },
+
+      discussionComments:function() {
+          let communityId = this.get('community_id');
+          return db.model('DiscussionComment').collection().query(function(q) {
+             q.join('discussion', 'discussion.discussion_id', '=', 'discussion_comment.discussion_id');
+             q.where({'discussion.community_id':communityId})
+          })
+      },
+
+      discussionCommentsSorted:function(offset,limit) {
+         offset = offset || 0;
+         limit = limit || 10;
+         
+         return this.related("discussionComments").query(function(q){q.orderBy("creation_date_time", "desc").offset(offset).limit(limit)}).fetch({withRelated:['postedByUser']});
       },
 
       users: function() {

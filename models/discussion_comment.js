@@ -21,9 +21,8 @@ var DiscussionComment = db.Model.extend(
          return this.belongsTo(db.model('Discussion'));
       },
 
-      user: function() {
+      postedByUser: function() {
          return this.belongsTo(db.model('User'), 'posted_by_user_id'); 
-         //return this.hasOne(User, 'posted_by_user_id'); 
       },
 
    }, 

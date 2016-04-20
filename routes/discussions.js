@@ -24,7 +24,10 @@ router.get('/', function(req, res, next) {
     }).catch( err => next(err));
 });
 
-router.get('/:id', function(req, res, next) {
+//
+// Only match if the id is an int. Otherwise, this should not grab urls like '/recent-activity'
+//
+router.get('/:id(\\d+)/', function (req, res, next){
     let discussionId = req.params.id;
     DiscussionsDS.get(req.communityId,discussionId).then(function(discussion) {
         res.json(discussion);
@@ -38,14 +41,11 @@ router.get('/:id/comments', function(req, res, next) {
     }).catch( err => next(err));
 });
 
-/*
-router.get('/:id/subPosts', function(req, res, next) {
-    let postEntryId = req.params.id;
-    PostsDS.subPosts(req.communityId,postEntryId).then(function(subPosts) {
-        res.json(subPosts);
+router.get('/recent-activity', function(req, res, next) {
+    DiscussionsDS.recentActivity(req.communityId,parseInt(req.query.offset),parseInt(req.query.limit)).then(function(recentActivity) {
+        res.json(recentActivity);
     }).catch( err => next(err));
 });
-*/
 
 
 module.exports = router;

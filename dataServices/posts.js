@@ -9,6 +9,11 @@ var PostEntry = require('../models').PostEntry;
 var Community = require('../models').Community;
 
 
+
+//
+// Private methods.
+//
+
 function getList(communityId,offset,limit,withRelated) {
     offset = offset || 0;
     limit = limit || 10;
@@ -23,10 +28,6 @@ function getList(communityId,offset,limit,withRelated) {
     });
 }
 
-
-//
-// Private methods.
-//
 function getPostById(communityId,postEntryId,withRelated) {
 
     withRelated = withRelated || {}
@@ -50,7 +51,6 @@ function getPostById(communityId,postEntryId,withRelated) {
 module.exports = {
 
     list(communityId,offset,limit) {
-        console.log('DATE: ' + moment.utc('2014-09-30T23:05:12.000Z').toDate());
         return getList(communityId,offset,limit,{withRelated:['postedByUser','subPosts']});
     },
 
@@ -82,11 +82,14 @@ module.exports = {
     },
 
     recentActivity(communityId,offset,limit) {
+
         offset = offset || 0;
         limit = limit || 10;
         return new Promise( function (resolve,reject) {
+
             //
             // Concurrently grab the list of recent posts and the list of recent comments.
+            // Think of these 2 queries as running in parallel.
             //
             let promises = [
                //
@@ -98,8 +101,13 @@ module.exports = {
                //
                new Community({community_id:communityId}).postCommentsSorted(offset,limit)
             ];
+
             Promise.all(promises).then(function(values) { 
-                //let recentActivity = [{foo:'bar'}];
+
+                //
+                // Fill "recentActivity" with posts and comments. Normalize the data and only include the fields
+                // that the front-end cares about for the "recent activity" list view.
+                //
                 let recentActivity = values[0].map(function(post) {
                     post = post.toJSON()
                     return {
@@ -107,7 +115,9 @@ module.exports = {
                         title:post.title,
                         type:'post',
                         creationDateTime:post.creation_date_time,
-                        postedByUser:omit(post.postedByUser,'password')
+                        postedByUser:omit(post.postedByUser,'password'),
+                        debugDateTime:String(moment.utc(post.creation_date_time).toDate()),
+                        momentDateTime:moment.utc(post.creation_date_time)
                     }
                 });
                 recentActivity = recentActivity.concat(
@@ -119,9 +129,38 @@ module.exports = {
                         title:comment.body,
                         type:'comment',
                         creationDateTime:comment.creation_date_time,
-                        postedByUser:omit(comment.postedByUser,'password')
+                        postedByUser:omit(comment.postedByUser,'password'),
+                        debugDateTime:String(moment.utc(comment.creation_date_time).toDate()),
+                        momentDateTime:moment.utc(comment.creation_date_time)
                     }
                 }));
+
+                //
+                // Sort by date. Most recent dates at the top.
+                //
+                recentActivity.sort(function(item1,item2) {
+                    let diff = item1.momentDateTime.diff(item2.momentDateTime)
+                    if (diff > 1) {
+                        return -1;
+                    } else if (diff < 1) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                });
+
+                //
+                // Remove the temp "momentDateTime" we added to each item and used for sorting.
+                //
+                recentActivity = recentActivity.map(item => {
+                    return omit(item,'momentDateTime');
+                });
+
+                //
+                // Constrain the list to the limit passed in.
+                //
+                recentActivity.length = Math.min(recentActivity.length,limit);
+
                 return resolve(recentActivity);
             }).catch(function(err) {
                 return reject(err);

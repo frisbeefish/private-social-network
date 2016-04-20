@@ -27,17 +27,16 @@ var Discussion = db.Model.extend(
       commentsSorted:function(offset,limit) {
          offset = offset || 0;
          limit = limit || 10;
+
          return this.related("comments").query(function(q){q.orderBy("creation_date_time", "desc").offset(offset).limit(limit)}).fetch();
       },
 
       postedByUser: function() {
          return this.belongsTo(db.model('User'), 'posted_by_user_id'); 
-         //return this.hasOne(User, 'posted_by_user_id'); 
       },
 
       category: function() {
          return this.belongsTo(db.model('DiscussionCategory'), 'discussion_category_id'); 
-         //return this.hasOne(User, 'posted_by_user_id'); 
       },
 
    },
