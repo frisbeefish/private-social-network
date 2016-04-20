@@ -6,6 +6,10 @@ NOTE: This is a work in progress. I'm re-implementing this in node.js. The curre
 
 Here are some screen shots that show how the final product looks:
 
+## Home
+
 ![Alt text](/gchome.png?raw=true "Home")
+
+## Log In
 
 ![Alt text](/gclogin.png?raw=true "Login")
