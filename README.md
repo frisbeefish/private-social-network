@@ -6,9 +6,15 @@ NOTE: This is a work in progress. I'm re-implementing this in node.js. The curre
 
 Here are some screen shots that show how the final product looks:
 
+<br/>
+<hr/>
+
 ## Home
 
 ![Alt text](/gchome.png?raw=true "Home")
+
+<br/>
+<hr/>
 
 ## Log In
 
