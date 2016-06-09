@@ -11,7 +11,7 @@
  * The main application can be found in 'app.js'.
  *
  **/
- 
+
 "use strict";
 
 var express = require('express');
@@ -92,20 +92,13 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (app.get('env') === 'development') {
-
    app.use(function(err, req, res, next) {
-
-
       let status = err.status || 500;
-
       if (status >= 500) {
          console.error(err);
          console.error(err.stack);
       }
-
       res.status(status);
-
-
       res.format({
          text: function() {
             res.send(err.message);
@@ -120,25 +113,17 @@ if (app.get('env') === 'development') {
             });
          }
       });
-
-
    });
 }
 
 if (app.get('env') === 'test') {
-
    app.use(function(err, req, res, next) {
-
-
       let status = err.status || 500;
-
       if (status >= 500) {
          console.error(err);
          console.error(err.stack);
       }
-
       res.status(status);
-
       res.format({
          text: function() {
             res.send(err.message);
@@ -153,25 +138,18 @@ if (app.get('env') === 'test') {
             });
          }
       });
-
-
    });
 }
 
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
-
-
    let status = err.status || 500;
-
    if (status >= 500) {
       console.error(err);
       console.error(err.stack);
    }
-
    res.status(status);
-
    res.format({
       text: function() {
          res.send(err.message);
@@ -186,7 +164,6 @@ app.use(function(err, req, res, next) {
          });
       }
    });
-
 });
 
 //
