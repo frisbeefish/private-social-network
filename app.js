@@ -23,7 +23,7 @@ var methodOverride = require("method-override");
 
 var api = require('./api');
 
-var pageRoutes = require('./routes/pages/index');
+var pageRoutes = require('./routes').pageRoutes;
 
 var app = express();
 

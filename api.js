@@ -22,7 +22,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var methodOverride = require("method-override");
 
-var routes = require('./routes/api/index');
+var apiRoutes = require('./routes').apiRoutes;
 
 var app = express();
 
@@ -69,14 +69,14 @@ app.use(function(req, res, next) {
 //
 // Mount all of the API routes. They all live under the '/api' base URL.
 //
-app.use('/', routes.root);
-app.use('/calendars', routes.calendar);
-app.use('/communities', routes.communities);
-app.use('/discussions', routes.discussions);
-app.use('/messages', routes.messages);
-app.use('/pages', routes.pages);
-app.use('/posts', routes.posts);
-app.use('/users', routes.users);
+app.use('/', apiRoutes.root);
+app.use('/calendars', apiRoutes.calendar);
+app.use('/communities', apiRoutes.communities);
+app.use('/discussions', apiRoutes.discussions);
+app.use('/messages', apiRoutes.messages);
+app.use('/pages', apiRoutes.pages);
+app.use('/posts', apiRoutes.posts);
+app.use('/users', apiRoutes.users);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
