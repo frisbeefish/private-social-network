@@ -1,12 +1,21 @@
 
 "use strict";
 
-var express = require('express');
-var router = express.Router();
+//var express = require('express');
+//var router = express.Router();
+
+//
+// This monkey patches the router so that it will catch many exceptions and expose them through
+// the 'uncaughtException' error stream from the process.
+//
+var router = require('./utils').Router();
 
 var Errors = require('../utils').Errors;
+var NotImplementedError = Errors.NotImplementedError;
+var NotFoundError = Errors.NotFoundError;
 
-var Community = require('../models').Community;
+
+//var Community = require('../models').Community;
 
 //
 // The Data Service(s)
@@ -14,10 +23,13 @@ var Community = require('../models').Community;
 var CommunitiesDS = require('../dataServices').Communities;
 
 
+///////////////////////////////////////////////////////////////////////////////////
 //
 // The Routes.
+//
 // NOTE: All the routes use data services to access the models and/or other services to do non-model based business logic.
 //
+///////////////////////////////////////////////////////////////////////////////////
 
 
 router.get('/', function(req, res, next) {
@@ -48,7 +60,7 @@ router.get('/:id/discussions', function(req, res, next) {
     }).catch( err => next(err));
 });
 
-router.get('/:id/discussionCategories', function(req, res, next) {
+router.get('/:id/discussion-categories', function(req, res, next) {
     var communityId = req.params.id;
     CommunitiesDS.discussionCategories(communityId,parseInt(req.query.offset),parseInt(req.query.limit)).then(function(discussionCategories) {
         res.json(discussionCategories);
@@ -88,12 +100,35 @@ router.get('/:id/admins', function(req, res, next) {
     }).catch( err => next(err));
 });
 
-router.get('/:id/groupUser', function(req, res, next) {
+router.get('/:id/group-user', function(req, res, next) {
     var communityId = req.params.id;
     CommunitiesDS.groupUser(communityId).then(function(users) {
         res.json(users);
     }).catch( err => next(err));
 });
+
+//
+// Create community    /communities    POST
+//
+router.post('/', function(req, res, next) {
+    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+});
+
+//
+// Update community    /communities/123    PUT
+//
+router.put('/:communityId', function(req, res, next) {
+    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+});
+
+//
+// Delete community    /communities/123    DELETE
+//
+router.delete('/:communityId', function(req, res, next) {
+    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+});
+
+
 
 
 module.exports = router;

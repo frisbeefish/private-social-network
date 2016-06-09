@@ -9,6 +9,7 @@ let db = require('./db').db;
 // the bookshelf registry of models. These are models that are referenced by the model defined in this
 // file.
 //
+require('./calendar_event_attendee');
 require('./newdesign_calendar_event_attendee');
 require('./user');
 
@@ -20,6 +21,10 @@ var CalendarEvent = db.Model.extend(
 
       creator:function() {
         return this.belongsTo(db.model('User'), 'creator_id');
+      },
+
+      creatorLink: function() {
+         return this.hasMany(db.model('CalendarEventAttendee'), 'calendar_event_id'); // THIS WAS THE MAGIC!! Needed this parameter at the end.
       },
 
       attendees: function() {

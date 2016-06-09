@@ -48,6 +48,11 @@ var Discussion = db.Model.extend(
             creation_date_time: new Date(),
             discussion_height: 0
          }
+      },
+      constructPrimaryKey : function(rowData) {
+          return {
+              discussion_id:rowData.discussion_id
+          }
       }
    }
 );

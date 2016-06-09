@@ -7,8 +7,9 @@
 //    DB_USER=mydbuser DB_PASSWORD=mypass forever -w ./bin/www
 //
 
-let dbUser = process.env.DB_USER
-let dbPassword = process.env.DB_PASSWORD
+let dbUser = process.env.DB_USER;
+let dbPassword = process.env.DB_PASSWORD;
+let debugDb = process.env.NODE_ENV === 'test' ? false : true;
 
 module.exports = {
 
@@ -21,7 +22,7 @@ module.exports = {
             database : 'groupcafes',
             charset  : 'utf8'
         },
-        debug: true
+        debug: debugDb
     }
 
 }

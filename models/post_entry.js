@@ -48,6 +48,11 @@ var PostEntry = db.Model.extend(
             thumbnail_url: "",
             original_content_url: ""
          }
+      },
+      constructPrimaryKey : function(rowData) {
+          return {
+              post_entry_id:rowData.post_entry_id
+          }
       }
    }
 );

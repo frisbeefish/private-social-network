@@ -22,9 +22,17 @@ var CalendarMonth = db.Model.extend(
          return this.belongsTo(db.model('Calendar'), 'calendar_id');
       },
 
+// .query({where: {access: 'admin'}});
       calendarEvents:function() {
-          return this.belongsToMany(db.model('CalendarEvent'), 'calendar_event_attendee', 'calendar_month_id', 'calendar_event_id');
+          return this.belongsToMany(
+            db.model('CalendarEvent'), 'calendar_event_attendee', 'calendar_month_id', 'calendar_event_id');
       },
+
+      calendarEventsWithCreators:function() {   
+         return this.related("calendarEvents").query(function(q){}).fetch();
+      },
+
+
 
    },
    {

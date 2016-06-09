@@ -4,12 +4,18 @@ let path = require('path');
 
 let db = require('./db').db;
 
+//let promisesSequence = require('../utils').Tools.promisesSequence;
+
+let omit = require('../utils').Tools.omit;
+let Errors = require('../utils').Errors;
+
 //
 // Require but don't save in a variable. This ensures that the models are loaded and added into
 // the bookshelf registry of models. These are models that are referenced by the model defined in this
 // file.
 //
 require('./calendar');
+require('./calendar_month');
 require('./community_user');
 require('./discussion');
 require('./discussion_category');
@@ -19,6 +25,37 @@ require('./post_entry');
 require('./post_entry_comment');
 require('./user');
 
+//
+// Private methods.
+//
+function getCommunityGroupUser(communityId) {
+    return new Promise( function (resolve,reject) {
+        Community.where('community_id', communityId).fetch().then(function(community) {
+            if (community) {
+                community.groupUser().then(function(users) {
+                    let user = users.toJSON()[0];
+                    user = omit(user,'password');
+                    return resolve(user);
+                }).catch(function(err) {
+                    return reject(err);
+                })
+            } else {
+               return reject(new Errors.NotFoundError('No community found with the specified id'));
+            }
+
+        }).catch(function(err) {
+            return reject(err);
+        });
+    });
+}
+
+function getCalendar(calendar,groupUser) {
+   return calendar.related("calendars").query(
+       function(q){q.where('owner_id', '=', groupUser.user_id )}
+       ).fetchOne();
+} 
+
+//=> { return self.related("calendars").query(function(q){q.where('owner_id', '=', groupUser.user_id )}).fetchOne())
 
 
 let Community = db.Model.extend(
@@ -30,9 +67,51 @@ let Community = db.Model.extend(
          return this.hasMany(db.model('Calendar'), 'community_id'); // THIS WAS THE MAGIC!! Needed this parameter at the end.
       },
 
-      groupCalendar: function(calendarOwnerId) {
+      groupCalendar: function() {
          let communityId = this.get('community_id');
-         return this.related("calendars").query(function(q){q.where('owner_id', '=', calendarOwnerId )}).fetch();
+         let self = this;
+
+         return new Promise( function (resolve,reject) {
+
+             //return reject('hi scott');
+
+             
+
+             /*
+             return this.related("calendars").query(function(q){q.where('owner_id', '=', calendarOwnerId )}).fetch();
+             */
+
+             getCommunityGroupUser(communityId)
+             .then((groupUser) => getCalendar(self,groupUser))
+             .then(function(calendar) {
+                return resolve(calendar);
+             }).catch(function(err) {
+                return reject(err);
+             });
+
+             /*
+
+              let sequence = promisesSequence([ 
+                  // 
+                  // First, get the group user
+                  //
+                  _ => {return getCommunityGroupUser(communityId)},
+
+                  //
+                  // Then get the calendar.
+                  //
+                  (groupUser) => { return self.related("calendars").query(function(q){q.where('owner_id', '=', groupUser.user_id )}).fetchOne()}
+              ]);
+
+              sequence.then(function(calendar) {
+                  return resolve(calendar);
+              }).catch(function(err) {
+                  return reject(err);
+              });
+*/
+
+          });
+
       },
 
       discussionCategories: function() {
@@ -121,7 +200,7 @@ let Community = db.Model.extend(
 
       usersSorted:function(offset,limit) {
          offset = offset || 0;
-         limit = limit || 10;
+         limit = limit || 1000;
          let communityId = this.get('community_id');
          return this.related("users").query(function(q){q.where('community_id', '=', communityId ).orderBy("friendly_name", "desc").offset(offset).limit(limit)}).fetch();
       },

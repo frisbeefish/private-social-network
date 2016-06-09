@@ -14,6 +14,7 @@ var bookshelf = require('bookshelf')(knex);
 // Link: http://billpatrianakos.me/blog/2015/11/30/how-to-structure-bookshelf-dot-js-models/
 //
 bookshelf.plugin('registry');
+bookshelf.plugin(require('bookshelf-transaction-manager'));
 
 module.exports = {
     knex,

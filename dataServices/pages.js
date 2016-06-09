@@ -1,5 +1,10 @@
-
 "use strict";
+
+const MAIN_MODEL = 'Page';
+const SUB_PAGE_MODEL = 'SubPage';
+const PAGE_POST_MODEL = 'PagePost';
+const PAGE_POST_SUB_ELEMENT_MODEL = 'PagePostSubelement';
+
 
 var Page = require('../models').Page;
 var SubPage = require('../models').SubPage;
@@ -8,367 +13,240 @@ var PagePostSubelement = require('../models').PagePostSubelement;
 
 var Errors = require('../utils').Errors;
 
-let exists = require('./utils').exists;
+var dbList = require('./jsondb').list;
+var dbGetOne = require('./jsondb').get;
+var dbInsert = require('./jsondb').insert;
+var dbUpdate = require('./jsondb').update;
+var dbDelete = require('./jsondb').deleteRow;
+var dbTransaction = require('./jsondb').withTransaction;
 
-function getSubPage(pageId,subPageId) {
-    return new Promise( function (resolve,reject) {
-        SubPage.where({'id':subPageId,'page_id':pageId}).fetch().then(function(subPage) {
-            if (subPage) {
-                return resolve(subPage); //.toJSON());
-            } else {
-               return reject(new Errors.NotFoundError('No sub page found with the specified id'));
-            }
 
-        }).catch(function(err) {
-            return reject(err);
-        });
-    });
+
+///////////////////////////////////////////////////////////////////////////////////
+//
+// PRIVATE METHODS
+//
+///////////////////////////////////////////////////////////////////////////////////
+
+
+/**
+ * Returns the specified page.
+ *
+ * @param {number} communityId - The id of the community whose page will be returned.
+ * @param {number} pageId - The id of the page to return.
+ *
+ * @return {Promise} A promise that returns the page as a {Model}.
+ */
+function getOnePage(communityId,pageId,withRelated) {
+   withRelated = withRelated || {}
+
+   return dbGetOne(MAIN_MODEL, 
+      [ ['community_id', '=', communityId], ['id', '=', pageId] ], // Where
+      withRelated
+   )
+
+   //
+   // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+   //
+   .catch(function(err) {
+      return Promise.reject(new Errors.NotFoundError('No page found with the specified id'));
+   });
 }
 
-function getSubPages(communityId,pageId,offset,limit) {
-   offset = offset || 0;
-   limit = limit || 10;
-   return new Promise( function (resolve,reject) {
-        Page.where({'id':pageId,'community_id':communityId}).fetch().then(function(page) {
-            if (page) {
-                page.subPagesSorted(offset,limit).then(function(subPages) {
-                    return resolve(subPages);
-                }).catch(function(err) {
-                    return reject(err);
-                });
-            } else {
-               return reject(new Errors.NotFoundError('No page found with the specified id'));
-            }
+/**
+ * Returns the a single sub page by id.
+ *
+ * @param {number} communityId - The id of the community whose page's sub page will be returned.
+ * @param {number} pageId - The id of the page whose sub page will be returned.
+ * @param {number} subPageId - The id of the sub page to return.
+ *
+ * @return {Promise} A promise that returns the sub page as a {Model}.
+ */
+function getSubPage(communityId, pageId, subPageId) {
 
-        }).catch(function(err) {
-            return reject(err);
-        });
-    });
+   //
+   // First, make sure the page exists.
+   //
+
+   return getOnePage(communityId, pageId,{withRelated:['subPages']})
+
+   //
+   // Return the sub page
+   //
+   .then(function(page) {
+      return dbGetOne(SUB_PAGE_MODEL, [ ['id', '=', subPageId] ])
+   })
+
+   //
+   // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+   //
+   .catch(function(err) {
+      return Promise.reject(new Errors.NotFoundError('No page found with the specified id'));
+   });
 }
 
+function getPagePost(communityId, pageId, pagePostId) {
+
+   //
+   // First, ensure that the page exists.
+   //
+
+   return getOnePage(communityId, pageId)
+
+   //
+   // Now, return the page post.
+   //
+
+   .then(function(page) {
+      return dbGetOne(PAGE_POST_MODEL, [
+         ['id', '=', pagePostId]
+      ])
+   })
+}
 
 
 module.exports = {
 
-    list(communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Page.collection().query(function(q){q.where('community_id', '=', communityId).orderBy("page_type_id", "asc").offset(offset).limit(limit)}).fetch().then(function(pages) {
-                return resolve(pages.toJSON());
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
+   /**
+    * Returns a list of pages for the specific community.
+    *
+    * @param {number} communityId - The id of the community whose pages will be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the pages as a a collection of {Model}.
+    */
+   list(communityId, offset, limit) {
 
-    get(communityId,pageId) {
-        return new Promise( function (resolve,reject) {
-            Page.where({'id':pageId,'community_id':communityId}).fetch().then(function(page) {
-                if (page) {
-                    return resolve(page.toJSON());
-                } else {
-                   return reject(new Errors.NotFoundError('No page found with the specified id'));
-                }
+      offset = offset || 0;
+      limit = limit || 10;
 
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
+      return dbList(
+         MAIN_MODEL,                             // Model (the db table)
+         [ ['community_id', '=', communityId] ], // The where clause
+         [ ['page_type_id', 'asc'] ],            // The order by clause
+         {},
+         offset, limit
+      );
+   },
 
-    subPages(communityId,pageId,offset,limit) {
-        return getSubPages(communityId,pageId,offset,limit)
-        /*
-       offset = offset || 0;
-       limit = limit || 10;
-       return new Promise( function (resolve,reject) {
-            Page.where({'id':pageId,'community_id':communityId}).fetch().then(function(page) {
-                if (page) {
-                    page.subPagesSorted(offset,limit).then(function(subPages) {
-                        return resolve(subPages);
-                    }).catch(function(err) {
-                        return reject(err);
-                    });
-                } else {
-                   return reject(new Errors.NotFoundError('No page found with the specified id'));
-                }
+   /**
+    * Returns the specified page.
+    *
+    * @param {number} communityId - The id of the community whose page will be returned.
+    * @param {number} pageId - The id of the page to return.
+    *
+    * @return {Promise} A promise that returns the page as a {Model}.
+    */
+   get(communityId, pageId) {
+      return getOnePage(communityId, pageId)
+   },
 
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-*/
-    },
+   /**
+    * Returns the sub pages of the specified page.
+    *
+    * @param {number} communityId - The id of the community whose page's sub pages will be returned.
+    * @param {number} pageId - The id of the page whose sub pages will be returned.
+    *
+    * @return {Promise} A promise that returns the sub pages as a collection of {Model}.
+    */
+   subPages(communityId, pageId) {
 
-    getSubPage(communityId,pageId,subPageId) {
-       let getPage = this.get;
-       return new Promise( function (resolve,reject) {
-          getPage(communityId,pageId).then(function(page) {
-             getSubPage(pageId,subPageId).then(function(subPage) {
-                return resolve(subPage.toJSON());
-             }).catch( err => reject(err));
-          }).catch( err => reject(err));
-        });
-    },
+      return getOnePage(communityId, pageId,{withRelated:['subPages']})
 
-    subPagePosts(communityId,pageId,subPageId,offset,limit) {
+      //
+      // Return the sub pages
+      //
+      .then(function(page) {
+         return page.related('subPages')
+      })
 
-       let getPage = this.get;
+      //
+      // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+      //
+      .catch(function(err) {
+         return Promise.reject(new Errors.NotFoundError('No page found with the specified id'));
+      });
+   },
 
-       offset = offset || 0;
-       limit = limit || 10;
-       return new Promise( function (resolve,reject) {
-          getPage(communityId,pageId).then(function(page) {
-             getSubPage(pageId,subPageId).then(function(subPage) {
-                subPage.pagePostsSorted(offset,limit).then(function(posts) {
-                    return resolve(posts);
-                }).catch(function(err) {
-                    return reject(err);
-                });
-             }).catch( err => reject(err));
-          }).catch( err => reject(err));
-        });
-    },
+   /**
+    * Returns the a single sub page by id.
+    *
+    * @param {number} communityId - The id of the community whose page's sub page will be returned.
+    * @param {number} pageId - The id of the page whose sub page will be returned.
+    * @param {number} subPageId - The id of the sub page to return.
+    *
+    * @return {Promise} A promise that returns the sub page as a {Model}.
+    */
+   getSubPage(communityId, pageId, subPageId) {
+      return getSubPage(communityId, pageId, subPageId)
+   },
 
-    posts(communityId,pageId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
+   /**
+    * Returns the posts for a single sub page.
+    *
+    * @param {number} communityId - The id of the community whose page's sub page posts will be returned.
+    * @param {number} pageId - The id of the page whose sub page posts will be returned.
+    * @param {number} subPageId - The id of the sub page whose posts will be returned..
+    *
+    * @return {Promise} A promise that returns posts as a collection of {Model}.
+    */
+   subPagePosts(communityId, pageId, subPageId) {
+      return getSubPage(communityId, pageId, subPageId)
 
-        Page.where({'id':pageId,'community_id':communityId}).fetch().then(function(page) {
-            if (page) {
-                page.pagePostsSorted(offset,limit).then(function(posts) {
-                    return resolve(posts);
-                }).catch(function(err) {
-                    return reject(err);
-                });
-            } else {
-               return reject(new Errors.NotFoundError('No page found with the specified id'));
-            }
+      .then(function(subPage) {
+         return subPage.pagePostsSorted()
+      })
+   },
 
-        }).catch(function(err) {
-            return reject(err);
-        });
+   /**
+    * Returns the all the posts for a page.
+    *
+    * @param {number} communityId - The id of the community whose page's posts will be returned.
+    * @param {number} pageId - The id of the page whose page posts will be returned.
+    *
+    * @return {Promise} A promise that returns posts as a collection of {Model}.
+    */
+   posts(communityId, pageId) {
+      return getOnePage(communityId, pageId)
 
-/*
-            getSubPages(communityId,pageId,offset,limit).then(function(subPages) {
-                subPages.forEach(function(subPage) {
-                    console.log('sub page: ' + subPage);
-                    console.log('sub page posts: ' + subPage.pagePosts);
-                });
-               return resolve(subPages);
-            }).catch( err => reject(err));
-*/
+      .then(function(page) {
+         return page.pagePostsSorted();
+      })
+   },
 
-            /*
-            PagePost.collection().query(function(q){
-                q.where({'community_id':communityId,}'community_id', '=', communityId)
-                .orderBy("id", "asc").offset(offset).limit(limit)}).fetch().then(function(posts) {
-                return resolve(posts.toJSON());
-            }).catch(function(err) {
-                return reject(err);
-            });
-*/
-        });
-    },
+   /**
+    * Returns a single page post.
+    *
+    * @param {number} communityId - The id of the community whose page's post will be returned.
+    * @param {number} pageId - The id of the page whose page post will be returned.
+    * @param {number} pagePostId - The id of the page post.
+    *
+    * @return {Promise} A promise that returns the post as a {Model}.
+    */
+   getPagePost(communityId, pageId, pagePostId) {
+      return getPagePost(communityId, pageId, pagePostId);
+   },
 
-    getPagePost(communityId,pageId,pagePostId) {
+   getPagePostSubposts(communityId, pageId, pagePostId) {
 
-        let getPage = this.get;
+      //
+      // First, ensure this is a valid page post
+      //
 
+      return getPagePost(communityId, pageId, pagePostId)
 
-        console.log('IN GET PAGE POST');
+      //
+      // Then return its sub posts (like the images of a gallery post or the files in a file post)
+      //
 
-/*
-new Site({id:1})
-  .authors()
-  .query({where: {id: 2}})
-  .fetchOne()
-  .then(function(model) {
-    // ...
-  });
-*/
-
-
-/*
-            Page.forge({'id':pageId,'community_id':communityId}).then(function(row) {
-                console.log('exists? ' + exists);
-            }).catch(function(err) {
-               console.log('ERROR: ' + err);
-            });
-
-        DSUtils.exists(Page,{'id':pageId,'community_id':communityId}).then(function(exists) {
-            console.log('exists? ' + exists);
-        }).catch(err => console.log(err));
-*/
-
-       
-/*
-var p = exists(Page,{'id':pageId,'community_id':communityId});
-var p2 = exists(Page,{'id':pageId,'community_id':communityId});
-
-Promise.all([p,p2]).then(function(values) { 
-  console.log('RESOLVED: ' + values); // [3, 1337, "foo"] 
-}).catch(err => console.log(err));
-*/
-
-       return new Promise( function (resolve,reject) {
-
-          exists(Page,{'id':pageId,'community_id':communityId}).then(function(doesExist) {
-             if (doesExist) {
-                PagePost.where({'id':pagePostId}).fetch().then(function(pagePost) {
-                    if (pagePost) {
-                        return resolve(pagePost); //.toJSON());
-                    } else {
-                       return reject(new Errors.NotFoundError('No page post found with the specified id'));
-                    }
-
-                }).catch(function(err) {
-                    return reject(err);
-                });
-             } else {
-                return reject(new Errors.NotFoundError('No page found with the specified id'));
-             }
-          }).catch(function(err) {
-             return reject(err);
-          });
-
-        /*
-          getPage(communityId,pageId).then(function(page) {
-             //
-             // This only executes if the page was valid and it was in the specified community.
-             //
-            PagePost.where({'id':pagePostId}).fetch().then(function(pagePost) {
-                if (pagePost) {
-                    return resolve(pagePost); //.toJSON());
-                } else {
-                   return reject(new Errors.NotFoundError('No page post found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-
-          }).catch( err => reject(err));
-*/
-
-        });
-
-            /*
-            PagePost.where({'id':subPageId,'page_id':pageId}).fetch().then(function(subPage) {
-                if (subPage) {
-                    return resolve(subPage); //.toJSON());
-                } else {
-                   return reject(new Errors.NotFoundError('No sub page found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-*/
-      
-    },
-
-    getPagePostSubposts(communityId,pageId,pagePostId) {
-
-        // 1. does the page exist in the community?
-        // 2. does the page post exist in the page?
-
-
-       return new Promise( function (resolve,reject) {
-
-            //
-            // Get the page that matches the id and community. If this returns nothing, then the id is incorrect.
-            //
-            var fetchPage = Page.where({'id':pageId,'community_id':communityId}).fetch();
-
-            //
-            // Get the page post. If this returns nothing, then the id isn't correct.
-            //
-            var fetchPagePost = PagePost.where({'id':pagePostId}).fetch();
-
-            Promise.all([fetchPage,fetchPagePost]).then(function(values) { 
-                let page = values[0];
-                let pagePost = values[1];
-                if (page && pagePost) {
-                    let subPageId = pagePost.get('sub_page_id');
-
-                    PagePostSubelement.where({'page_post_id':pagePostId}).fetch().then(function(subPosts) {
-                        if (subPosts) {
-                            return resolve(subPosts); //.toJSON());
-                        } else {
-                            return resolve([]); //reject(new Errors.NotFoundError('No page post found with the specified id'));
-                        }
-
-                    }).catch(function(err) {
-                        return reject(err);
-                    });
-
-
-                    //return resolve({foo:'bar' + subPageId})
-                } else {
-                    return reject(new Errors.NotFoundError('No page post found with the specified id'));
-                }
-            }).catch(function(err) {
-                return reject(err);
-            });
-
-        /*
-            var pageExists = exists(Page,{'id':pageId,'community_id':communityId});
-            var pagePostExists = exists(PagePost,{'id':pagePostId,'page_id':pageId});
-
-            Promise.all([pageExists,pagePostExists]).then(function(values) { 
-               var allDoExist = a.reduce(function(acc,v) {
-                  return acc && v;
-               },true);
-               if (allDoExist) {
-                   return resolve('foo');
-                    PagePostSubelement.where({'page_post_id':pagePostId}).fetch().then(function(subPosts) {
-                        if (subPosts) {
-                            return resolve(subPosts); //.toJSON());
-                        } else {
-                           return reject(new Errors.NotFoundError('No page post found with the specified id'));
-                        }
-
-                    }).catch(function(err) {
-                        return reject(err);
-                    });
-
-               } else {
-                  return reject(new Errors.NotFoundError('No post found with the specified id'));
-               }
-            }).catch(function(err) {
-                return reject(err);
-            });
-*/
-
-       });
-
-
-    },
-
-    messages(userId,communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            User.where('user_id', userId).fetch().then(function(user) {
-                if (user) {
-                    user.messagesInCommunity(communityId,offset,limit).then(function(messages) {
-                        return resolve(messages);
-                    }).catch(function(err) {
-                        return reject(err);
-                    });
-                } else {
-                   return reject(new Errors.NotFoundError('No user found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
-   
-
+      .then(function(pagePost) {
+         return dbList(
+            PAGE_POST_SUB_ELEMENT_MODEL,           // Model (the db table)
+            [ ['page_post_id', '=', pagePostId] ], // The where clause
+            [ ['order_number', 'asc'] ],           // The order by clause
+            {}      
+         );
+      })
+   }
 }

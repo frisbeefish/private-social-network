@@ -1,233 +1,238 @@
 "use strict";
 
+const MAIN_MODEL = 'Community';
+const DISCUSSION_CATEGORY_MODEL = 'DiscussionCategory';
+
+var DiscussionsDS = require('./discussions');
+var PagesDS = require('./pages');
+var PostsDS = require('./posts');
+var UsersDS = require('./users');
+
 var Errors = require('../utils').Errors;
 var omit = require('../utils').Tools.omit;
 
 var Community = require('../models').Community;
 
+var dbList = require('./jsondb').list;
+var dbGetOne = require('./jsondb').get;
+var dbInsert = require('./jsondb').insert;
+var dbUpdate = require('./jsondb').update;
+var dbDelete = require('./jsondb').deleteRow;
+var dbTransaction = require('./jsondb').withTransaction;
+
 module.exports = {
 
-    list(offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Community.collection().query(function(q){q.orderBy("network_name", "asc").offset(offset).limit(limit)}).fetch().then(function(communities) {
-                return resolve(communities.toJSON());
-            }).catch(function(err) {
-                return reject(err);
+   /**
+    * Returns a list of all communities.
+    *
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the communities as a a collection of {Model}.
+    */
+   list(offset, limit) {
+
+      offset = offset || 0;
+      limit = limit || 10;
+
+      return dbList(
+         MAIN_MODEL, // Model (the db table)
+         [], // The where clause
+         [
+            ["network_name", "asc"]
+         ], // The order by clause
+         {},
+         offset, limit
+      );
+   },
+
+   /**
+    * Returns a community based on its id.
+    *
+    * @param {number} communityId - The id of the community to return.
+    *
+    * @return {Promise} A promise that returns a {Model} for the returned community.
+    */
+   get(communityId) {
+
+      return dbGetOne(MAIN_MODEL, [
+         ['community_id', '=', communityId]
+      ])
+
+      //
+      // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+      //
+      .catch(function(err) {
+         return Promise.reject(new Errors.NotFoundError('No community found with the specified id'));
+      });
+   },
+
+   /**
+    * Returns the calendar for the community.
+    *
+    * @param {number} communityId - The id of the community whose calendar should be returned.
+    *
+    * @return {Promise} A promise that returns a {Model} for the returned calendar.
+    */
+   calendar(communityId) {
+      return dbGetOne(MAIN_MODEL, [
+         ['community_id', '=', communityId]
+      ])
+
+      //
+      // Return the group calendar.
+      //
+      .then(function(community) {
+         return community.groupCalendar(); 
+      })
+
+      //
+      // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+      //
+      .catch(function(err) {
+        return Promise.reject(new Errors.NotFoundError('No community found with the specified id'));
+      });
+   },
+
+   /**
+    * Returns a list of all discussion categories for a community.
+    *
+    * @param {number} communityId - The id of the community whose discussion categories should be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the discussion categories as a a collection of {Model}.
+    */
+   discussionCategories(communityId, offset, limit) {
+
+      offset = offset || 0;
+      limit = limit || 10;
+
+      return dbList(
+         DISCUSSION_CATEGORY_MODEL,            // Model (the db table)
+         [['community_id', '=', communityId]], // The where clause
+         [ ["name", "asc"] ],                  // The order by clause
+         {},
+         offset, limit
+      );
+   },
+
+   /**
+    * Returns a list of discussions for the specific community.
+    *
+    * @param {number} communityId - The id of the community whose discussions will be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the discussions as a a collection of {Model}.
+    */
+   discussions(communityId, offset, limit) {
+      return DiscussionsDS.list(communityId, offset, limit);
+   },
+
+   /**
+    * Returns a list of pages for the specific community.
+    *
+    * @param {number} communityId - The id of the community whose pages will be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the pages as a a collection of {Model}.
+    */
+   pages(communityId, offset, limit) {
+      return PagesDS.list(communityId, offset, limit);
+   },
+
+
+   /**
+    * Returns a list of posts for the specified community.
+    *
+    * @param {number} communityId - The id of the community whose discussions will be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the posts as a a collection of {Model}.
+    */
+   posts(communityId, offset, limit) {
+      return PostsDS.list(communityId, offset, limit);
+   },
+
+   /**
+    * Returns a list of users for the specified community.
+    *
+    * @param {number} communityId - The id of the community whose discussions will be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the users as a a collection of {Model}.
+    */
+   users(communityId, offset, limit) {
+      return UsersDS.list(communityId, offset, limit);
+   },
+
+   /**
+    * Returns a list of admins for the specified community.
+    *
+    * @param {number} communityId - The id of the community whose discussions will be returned.
+    *
+    * @return {Promise} A promise that returns the admins as a a collection of {Model}.
+    */
+   admins(communityId) {
+
+      return dbGetOne(MAIN_MODEL, [
+         ['community_id', '=', communityId]
+      ])
+
+      //
+      // Return the group calendar.
+      //
+      .then(function(community) {
+         return community.adminsSorted()
+         .then(function(admins) {
+            let adminsWithoutPasswords = admins.toJSON().map((admin) => {
+               admin = omit(admin, 'password');
+               return admin;
             });
-        });
-    },
+            return Promise.resolve(adminsWithoutPasswords);
+         })
+      })
 
-    get(communityId) {
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                   return resolve(community.toJSON());
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-              
-            }).catch(function(err) {
-               return reject(err);
-            });
-        });
-    },
+      //
+      // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+      //
+      .catch(function(err) {
+        return Promise.reject(new Errors.NotFoundError('No community found with the specified id'));
+      });
+   },
 
-/*
-    CommunitiesDS.groupUser(communityId).then(function(users) {
-        res.json(users);
-    }).catch( err => next(err));
+   /**
+    * Returns the group user for the specified community.
+    *
+    * @param {number} communityId - The id of the community whose discussions will be returned.
+    *
+    * @return {Promise} A promise that returns the group user for the community as a {Model}.
+    */
+   groupUser(communityId) {
 
-*/
+      return dbGetOne(MAIN_MODEL, [
+         ['community_id', '=', communityId]
+      ])
 
-    calendar(communityId) {
-        
-        //console.log('IN CALENDAR, this.groupUser: ' + this.groupUser);
+      //
+      // Return the group user.
+      //
+      .then(function(community) {
+         return community.groupUser()
+         .then(function(user) {
+            return Promise.resolve(omit(user, 'password'));
+         })
+      })
 
-        let getGroupUser = this.groupUser;
-
-        return new Promise( function (resolve,reject) {
-            getGroupUser(communityId).then(function(user) {
-                Community.where('community_id', communityId).fetch().then(function(community) {
-                    if (community) {
-                        community.groupCalendar(user.user_id).then(function(calendars) {
-                            return resolve(calendars);
-                        }).catch(function(err) {
-                            return reject(err);
-                        })
-                    } else {
-                       return reject(new Errors.NotFoundError('No community found with the specified id'));
-                    }
-                }).catch(function(err) {
-                    return reject(err);
-                });
-            }).catch( err => reject(err));
-        });
-    },
-
-    discussionCategories(communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                    community.discussionCategoriesSorted(offset,limit).then(function(discussionCategories) {
-                        return resolve(discussionCategories);
-                    }).catch(function(err) {
-                        return reject(err);
-                    })
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
-    discussions(communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                    community.discussionsSorted(offset,limit).then(function(discussions) {
-                        return resolve(discussions);
-                    }).catch(function(err) {
-                        return reject(err);
-                    })
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
-
-    pages(communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                    community.pagesSorted(offset,limit).then(function(pages) {
-                        return resolve(pages);
-                    }).catch(function(err) {
-                        return reject(err);
-                    })
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
-
-
-    posts(communityId,offset,limit) {
-        console.log('IN POSTS DS, offset: ' + offset);
-        console.log('limit: ' + limit);
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                    community.postsSorted(offset,limit).then(function(posts) {
-                        return resolve(posts);
-                    }).catch(function(err) {
-                        return reject(err);
-                    })
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
-    users(communityId,offset,limit) {
-        console.log('IN POSTS DS, offset: ' + offset);
-        console.log('limit: ' + limit);
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                    community.usersSorted(offset,limit).then(function(users) {
-                        users = users.toJSON().map((user) => {
-                            user = omit(user,'password');
-                            return user;
-                        });
-                        return resolve(users);
-                    }).catch(function(err) {
-                        return reject(err);
-                    })
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
-    admins(communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                    community.adminsSorted(offset,limit).then(function(users) {
-                        users = users.toJSON().map((user) => {
-                            user = omit(user,'password');
-                            return user;
-                        });
-                        return resolve(users);
-                    }).catch(function(err) {
-                        return reject(err);
-                    })
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
-    groupUser(communityId) {
-        return new Promise( function (resolve,reject) {
-            Community.where('community_id', communityId).fetch().then(function(community) {
-                if (community) {
-                    community.groupUser().then(function(users) {
-                        let user = users.toJSON()[0];
-                        user = omit(user,'password');
-                        return resolve(user);
-                    }).catch(function(err) {
-                        return reject(err);
-                    })
-                } else {
-                   return reject(new Errors.NotFoundError('No community found with the specified id'));
-                }
-
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
-
+      //
+      // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+      //
+      .catch(function(err) {
+        return Promise.reject(new Errors.NotFoundError('No community found with the specified id'));
+      });
+   },
 }
-
-

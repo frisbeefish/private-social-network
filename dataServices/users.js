@@ -1,122 +1,177 @@
-
 "use strict";
+
+const MAIN_MODEL = 'User';
+const COMMUNITY_MODEL = 'Community';
+
+let CommunitiesDS = require('./communities');
 
 var User = require('../models').User;
 
+var omit = require('../utils').Tools.omit;
+
 var Errors = require('../utils').Errors;
 
-/*
-discussionsInCommunity:function(community_id,offset,limit) {
-         offset = offset || 0;
-         limit = limit || 10;
+var dbList = require('./jsondb').list;
+var dbGetOne = require('./jsondb').get;
+var dbInsert = require('./jsondb').insert;
+var dbUpdate = require('./jsondb').update;
+var dbDelete = require('./jsondb').deleteRow;
+var dbTransaction = require('./jsondb').withTransaction;
 
-         .query(function(q){q.where('community_id', '=', community_id).orderBy("creation_date_time", "desc").offset(offset).limit(limit)})
 
-*/
+///////////////////////////////////////////////////////////////////////////////////
+//
+// PRIVATE METHODS
+//
+///////////////////////////////////////////////////////////////////////////////////
+
+
+/**
+ * Returns the specified user.
+ *
+ * @param {number} communityId - The id of the community whose user will be returned.
+ * @param {number} userId - The id of the user to return.
+ * @param {number} withRelated - (Optional) Related data to retrieve.
+ *
+ * @return {Promise} A promise that returns the user as a {Model}.
+ */
+function getOneUser(communityId, userId, withRelated) {
+   withRelated = withRelated || {}
+
+   return dbGetOne(MAIN_MODEL, [ ['user_id', '=', userId] ], // Where
+      withRelated
+   )
+
+   //
+   // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+   //
+   .catch(function(err) {
+      return Promise.reject(new Errors.NotFoundError('No user found with the specified id'));
+   });
+}
+
+
 
 module.exports = {
 
-    list(offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            User.collection().query(function(q){q.orderBy("friendly_name", "asc").offset(offset).limit(limit)}).fetch().then(function(collection) {
-                var coll = collection.toJSON()
-                var response = [];
-                response = coll.map((user) => {
-                    return {
-                        user_id: user['user_id'],
-                        friendly_name: user['friendly_name'],
-                        first_name: user['first_name'],
-                        last_name: user['last_name']
-                    }
-                });
-                return resolve(response);
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
+   /**
+    * Returns a list of users for the specified community from the database.
+    *
+    * @param {number} communityId - The id of the community whose users will be returned.
+    *
+    * @return {Promise} A promise that returns the users as a a collection of {Model}.
+    */
+   list(communityId) {
 
-    get(userId) {
-        return new Promise( function (resolve,reject) {
-            User.where('user_id', userId).fetch().then(function(user) {
-                if (user) {
-                    user = user.toJSON();
-                    delete user.password;
-                    return resolve(user);
-                } else {
-                   return reject(new Errors.NotFoundError('No user found with the specified id'));
-                }
+      return dbGetOne(COMMUNITY_MODEL, [
+         ['community_id', '=', communityId]
+      ])
 
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
+      .then(function(community) {
+         return community.usersSorted()
+      })
 
-    discussions(userId,communityId,offset,limit) {
-       offset = offset || 0;
-       limit = limit || 10;
-       return new Promise( function (resolve,reject) {
-            User.where('user_id', userId).fetch().then(function(user) {
-                if (user) {
-                    user.discussionsInCommunity(communityId,offset,limit).then(function(discussions) {
-                        return resolve(discussions);
-                    }).catch(function(err) {
-                        return reject(err);
-                    });
-                } else {
-                   return reject(new Errors.NotFoundError('No user found with the specified id'));
-                }
+      .then(function(users) {
+         let usersSorted = users.toJSON().map((user) => {
+            return omit(user, 'password')
+         });
+         return Promise.resolve(usersSorted)
+      })
+   },
 
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
+   /**
+    * Returns the specified user.
+    *
+    * @param {number} communityId - The id of the community whose user will be returned.
+    * @param {number} userId - The id of the user to return.
+    * @param {number} withRelated - (Optional) Related data to retrieve.
+    *
+    * @return {Promise} A promise that returns the user as a {Model}.
+    */
+   get(communityId, userId) {
+      return getOneUser(communityId, userId)
 
-    messages(userId,communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            User.where('user_id', userId).fetch().then(function(user) {
-                if (user) {
-                    user.messagesInCommunity(communityId,offset,limit).then(function(messages) {
-                        return resolve(messages);
-                    }).catch(function(err) {
-                        return reject(err);
-                    });
-                } else {
-                   return reject(new Errors.NotFoundError('No user found with the specified id'));
-                }
+      .then(function(user) {
+         return Promise.resolve(omit(user.toJSON(), 'password'))
+      })
+   },
 
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
+   /**
+    * Returns the discussions posted by the specified user in the specified community.
+    *
+    * @param {number} communityId - The id of the community whose user's discussions will be returned.
+    * @param {number} userId - The id of the user whose discussions will be returned
+    *
+    * @return {Promise} A promise that returns the discussions as a {Model}.
+    */
+   discussions(communityId, userId, offset, limit) {
+      offset = offset || 0;
+      limit = limit || 10;
 
-    posts(userId,communityId,offset,limit) {
-        offset = offset || 0;
-        limit = limit || 10;
-        return new Promise( function (resolve,reject) {
-            User.where('user_id', userId).fetch().then(function(user) {
-                if (user) {
-                    user.postsInCommunity(communityId,offset,limit).then(function(discussions) {
-                        return resolve(discussions);
-                    }).catch(function(err) {
-                        return reject(err);
-                    });
-                } else {
-                   return reject(new Errors.NotFoundError('No user found with the specified id'));
-                }
+      return getOneUser(communityId, userId)
 
-            }).catch(function(err) {
-                return reject(err);
-            });
-        });
-    },
+      .then(function(user) {
+         return user.discussionsInCommunity(communityId, offset, limit)
+         .catch(function(err) {
+            return Promise.reject(new Error('Error: ' + err))
+         })
+      })
+         
+      .catch(function(err) {
+         return Promise.reject(new Errors.NotFoundError('No user found with the specified id'));
+      })
+   },
+
+   /**
+    * Returns the posts posted by the specified user in the specified community.
+    *
+    * @param {number} communityId - The id of the community whose user's posts will be returned.
+    * @param {number} userId - The id of the user whose posts will be returned
+    *
+    * @return {Promise} A promise that returns the posts as a {Model}.
+    */
+   posts(communityId, userId, offset, limit) {
+      offset = offset || 0;
+      limit = limit || 10;
+
+
+      return getOneUser(communityId, userId)
+      .then(function(user) {
+         return user.postsInCommunity(communityId, offset, limit)
+         .catch(function(err) {
+            return Promise.reject(new Error('Error: ' + err))
+         })
+      })
+      .catch(function(err) {
+         return Promise.reject(new Errors.NotFoundError('No user found with the specified id'));
+      })
+   },
+
+
+   /**
+    * Returns the messages posted by the specified user in the specified community.
+    *
+    * @param {number} communityId - The id of the community whose user's messages will be returned.
+    * @param {number} userId - The id of the user whose messages will be returned
+    *
+    * @return {Promise} A promise that returns the messages as a {Model}.
+    */
+   messages(communityId, userId, offset, limit) {
+      offset = offset || 0;
+      limit = limit || 10;
+
+      return getOneUser(communityId, userId)
+
+      .then(function(user) {
+         return user.messagesInCommunity(communityId, offset, limit)
+         .catch(function(err) {
+            return Promise.reject(new Error('Error: ' + err))
+         })
+      })
+      .catch(function(err) {
+         return Promise.reject(new Errors.NotFoundError('No user found with the specified id'));
+      })
+   }
 
 
 }

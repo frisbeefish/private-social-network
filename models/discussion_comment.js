@@ -32,7 +32,13 @@ var DiscussionComment = db.Model.extend(
             creation_date_time: new Date(),
             discussion_comment_height:0
          }
+      },
+      constructPrimaryKey : function(rowData) {
+          return {
+              discussion_comment_id:rowData.discussion_comment_id
+          }
       }
+
    }
 );
 

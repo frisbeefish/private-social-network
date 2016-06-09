@@ -1,7 +1,13 @@
 
 module.exports = {
+    db : require('./db').db,
+    CalendarEvent : require('./calendar_event'),
+    CalendarEventAttendee : require('./calendar_event_attendee'),
+    CalendarMonth : require('./calendar_month'),
     Community : require('./community'),
     Discussion : require('./discussion'),
+    DiscussionComment : require('./discussion_comment'),
+    DiscussionCategory : require('./discussion_category'),
     PostEntry : require('./post_entry'),
     PostEntryComment : require('./post_entry_comment'),
     Page : require('./page'),

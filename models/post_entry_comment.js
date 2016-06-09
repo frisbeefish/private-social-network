@@ -29,6 +29,11 @@ var PostEntryComment = db.Model.extend(
          return {
             creation_date_time: new Date()
          }
+      },
+      constructPrimaryKey : function(rowData) {
+          return {
+              post_entry_comment_id:rowData.post_entry_comment_id
+          }
       }
    }
 );
