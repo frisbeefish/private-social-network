@@ -1,3 +1,17 @@
+
+/*****************************************************************************************
+ *
+ * File api.js
+ *
+ * This is the API sub application that is mounted at the '/api' root URL. 
+ *
+ * The main application serves up the web pages. The API sub application serves up the REST API used
+ * by the pages.
+ *
+ * The main application can be found in 'app.js'.
+ *
+ **/
+ 
 "use strict";
 
 var express = require('express');
@@ -6,7 +20,7 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var methodOverride  = require("method-override");
+var methodOverride = require("method-override");
 
 var routes = require('./routes/api/index');
 
@@ -20,7 +34,9 @@ app.set('view engine', 'ejs');
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({
+   extended: false
+}));
 
 //
 // See this post: http://stackoverflow.com/questions/24019489/node-js-express-4-x-method-override-not-handling-put-request
@@ -44,13 +60,15 @@ app.use(methodOverride(function(req, res){
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(function(req, res, next){
+app.use(function(req, res, next) {
    req.communityId = 1
    req.userId = 1
-   //req.communityId = 5;
    next();
 });
 
+//
+// Mount all of the API routes. They all live under the '/api' base URL.
+//
 app.use('/', routes.root);
 app.use('/calendars', routes.calendar);
 app.use('/communities', routes.communities);
@@ -62,11 +80,11 @@ app.use('/users', routes.users);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  console.error('No route found for URL: ' + req.protocol + '://' + req.get('host') + req.originalUrl);
-  console.error('env: ' + app.get('env'))
-  next(err);
+   var err = new Error('Not Found');
+   err.status = 404;
+   console.error('No route found for URL: ' + req.protocol + '://' + req.get('host') + req.originalUrl);
+   console.error('env: ' + app.get('env'))
+   next(err);
 });
 
 // error handlers
@@ -74,110 +92,112 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (app.get('env') === 'development') {
-  
-  app.use(function(err, req, res, next) {
 
- // console.error('IN DEV ERROR HANDLER');
-
-  let status = err.status || 500;
-
-  if (status >= 500) {
-     console.error(err);
-     console.error(err.stack);
-  }
-
-    res.status(status);
+   app.use(function(err, req, res, next) {
 
 
-  res.format({
-      text:function() {
-          res.send(err.message);
-      },
-      json:function() {
-          res.send(err);
-      },
-      html:function() {
-        res.render('error', {
-          message: err.message,
-          error: {}
-        });
+      let status = err.status || 500;
+
+      if (status >= 500) {
+         console.error(err);
+         console.error(err.stack);
       }
-  });
+
+      res.status(status);
 
 
-  });
+      res.format({
+         text: function() {
+            res.send(err.message);
+         },
+         json: function() {
+            res.send(err);
+         },
+         html: function() {
+            res.render('error', {
+               message: err.message,
+               error: {}
+            });
+         }
+      });
+
+
+   });
 }
 
 if (app.get('env') === 'test') {
-  
-  app.use(function(err, req, res, next) {
 
-//  console.error('IN TEST ERROR HANDLER');
+   app.use(function(err, req, res, next) {
 
-  let status = err.status || 500;
 
-  if (status >= 500) {
-     console.error(err);
-     console.error(err.stack);
-  }
+      let status = err.status || 500;
 
-    res.status(status);
-
-  res.format({
-      text:function() {
-          res.send(err.message);
-      },
-      json:function() {
-          res.send(err);
-      },
-      html:function() {
-        res.render('error', {
-          message: err.message,
-          error: {}
-        });
+      if (status >= 500) {
+         console.error(err);
+         console.error(err.stack);
       }
-  });
+
+      res.status(status);
+
+      res.format({
+         text: function() {
+            res.send(err.message);
+         },
+         json: function() {
+            res.send(err);
+         },
+         html: function() {
+            res.render('error', {
+               message: err.message,
+               error: {}
+            });
+         }
+      });
 
 
-  });
+   });
 }
 
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
-  
-//  console.error('IN PROD ERROR HANDLER');
 
-  let status = err.status || 500;
 
-  if (status >= 500) {
-     console.error(err);
-     console.error(err.stack);
-  }
+   let status = err.status || 500;
 
-  res.status(status);
+   if (status >= 500) {
+      console.error(err);
+      console.error(err.stack);
+   }
 
-  res.format({
-      text:function() {
-          res.send(err.message);
+   res.status(status);
+
+   res.format({
+      text: function() {
+         res.send(err.message);
       },
-      json:function() {
-          res.send(err);
+      json: function() {
+         res.send(err);
       },
-      html:function() {
-        res.render('error', {
-          message: err.message,
-          error: {}
-        });
+      html: function() {
+         res.render('error', {
+            message: err.message,
+            error: {}
+         });
       }
-  });
-  
+   });
+
 });
 
+//
+// The "monkey patch" that is loaded for dev and testing will emit error events if any
+// JavaScript exceptions are thrown. We die ungracefully here to bail out and kill off the server and
+// let me (the developer) know ASAP that the code had an assert. So fix that code!
+//
 app.on('error', function(err) {
-  console.error(err);
-  console.error(err.stack);
-  process.exit(0);
+   console.error(err);
+   console.error(err.stack);
+   process.exit(0);
 });
 
 module.exports = app;
