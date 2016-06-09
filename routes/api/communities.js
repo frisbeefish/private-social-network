@@ -14,7 +14,7 @@ var NotFoundError = Errors.NotFoundError;
 //
 // The Data Service(s)
 //
-var CommunitiesDS = require('../../dataServices').Communities;
+var CommunitiesDS = require('../../data-services').Communities;
 
 
 ///////////////////////////////////////////////////////////////////////////////////
