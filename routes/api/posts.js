@@ -3,7 +3,7 @@
 
 //
 // This monkey patches the router so that it will catch many exceptions and expose them through
-// the 'uncaughtException' error stream from the process.
+// an 'error' event that is emitted by the app.
 //
 var router = require('../utils').Router();
 
