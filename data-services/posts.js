@@ -11,12 +11,12 @@ var PostEntry = require('../models').PostEntry;
 var Community = require('../models').Community;
 
 
-var dbList = require('./jsondb').list;
-var dbGetOne = require('./jsondb').get;
-var dbInsert = require('./jsondb').insert;
-var dbUpdate = require('./jsondb').update;
-var dbDelete = require('./jsondb').deleteRow;
-var dbTransaction = require('./jsondb').withTransaction;
+var dbList = require('./db-adapter').list;
+var dbGetOne = require('./db-adapter').get;
+var dbInsert = require('./db-adapter').insert;
+var dbUpdate = require('./db-adapter').update;
+var dbDelete = require('./db-adapter').deleteRow;
+var dbTransaction = require('./db-adapter').withTransaction;
 
 
 
@@ -237,7 +237,7 @@ module.exports = {
     * @return {Promise} A promise that returns a {Model} containing the newly created post (and its unique id).
     */
    createPost(communityId,postedByUserId,postType,title,body) {
-      return dbInsert({ modelName:MAIN_MODEL,post_type:postType,
+      return dbInsert({ '_modelName':MAIN_MODEL,post_type:postType,
          title:title, body:body, posted_by_user_id:postedByUserId, community_id:communityId
       });
    },
@@ -255,7 +255,7 @@ module.exports = {
     */
    updatePost(communityId,postedByUserId,postEntryId,title,body) {
       return dbUpdate({
-         modelName:MAIN_MODEL,      // Model 
+         '_modelName':MAIN_MODEL,      // Model 
          post_entry_id:postEntryId, // Where...
          title:title,  body:body    // Values to update.
       });
@@ -286,7 +286,7 @@ module.exports = {
          //
 
          .then(function() {
-            return dbDelete({ modelName:MAIN_MODEL,  post_entry_id:postEntryId },tx)
+            return dbDelete({ '_modelName':MAIN_MODEL,  post_entry_id:postEntryId },tx)
          })
       });
    },
@@ -308,7 +308,7 @@ module.exports = {
          // First, create a comment.
          //
 
-         return dbInsert({ modelName:COMMENT_MODEL, post_entry_id:postEntryId, 
+         return dbInsert({ '_modelName':COMMENT_MODEL, post_entry_id:postEntryId, 
             body:commentBody, posted_by_user_id:postedByUserId
          },tx)
 
@@ -327,7 +327,7 @@ module.exports = {
 
          .then(function(post) {
             let commentCount = post.toJSON().comment_count + 1;
-            return dbUpdate({ modelName:MAIN_MODEL, post_entry_id:postEntryId, comment_count:commentCount },tx);
+            return dbUpdate({ '_modelName':MAIN_MODEL, post_entry_id:postEntryId, comment_count:commentCount },tx);
          })
          .then(function(updatedPost) {
             return Promise.resolve(comment);
@@ -349,7 +349,7 @@ module.exports = {
          //
          // First, delete the comment.
          //
-         return dbDelete({ modelName:COMMENT_MODEL,  post_entry_comment_id:postEntryCommentId },tx)
+         return dbDelete({ '_modelName':COMMENT_MODEL,  post_entry_comment_id:postEntryCommentId },tx)
 
          //
          // Then, get the discussion whose comment was deleted.
@@ -364,7 +364,7 @@ module.exports = {
          //
          .then(function(post) {
             let commentCount = post.toJSON().comment_count - 1;
-            return dbUpdate({ modelName:MAIN_MODEL, post_entry_id:postEntryId, comment_count:commentCount },tx);
+            return dbUpdate({ '_modelName':MAIN_MODEL, post_entry_id:postEntryId, comment_count:commentCount },tx);
          })
       });
    }

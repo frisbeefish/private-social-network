@@ -13,12 +13,12 @@ var PagePostSubelement = require('../models').PagePostSubelement;
 
 var Errors = require('../utils').Errors;
 
-var dbList = require('./jsondb').list;
-var dbGetOne = require('./jsondb').get;
-var dbInsert = require('./jsondb').insert;
-var dbUpdate = require('./jsondb').update;
-var dbDelete = require('./jsondb').deleteRow;
-var dbTransaction = require('./jsondb').withTransaction;
+var dbList = require('./db-adapter').list;
+var dbGetOne = require('./db-adapter').get;
+var dbInsert = require('./db-adapter').insert;
+var dbUpdate = require('./db-adapter').update;
+var dbDelete = require('./db-adapter').deleteRow;
+var dbTransaction = require('./db-adapter').withTransaction;
 
 
 

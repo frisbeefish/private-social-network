@@ -13,12 +13,12 @@ var DiscussionComment = require('../models').DiscussionComment;
 var DiscussionCategory = require('../models').DiscussionCategory;
 
 
-var dbList = require('./jsondb').list;
-var dbGetOne = require('./jsondb').get;
-var dbInsert = require('./jsondb').insert;
-var dbUpdate = require('./jsondb').update;
-var dbDelete = require('./jsondb').deleteRow;
-var dbTransaction = require('./jsondb').withTransaction;
+var dbList = require('./db-adapter').list;
+var dbGetOne = require('./db-adapter').get;
+var dbInsert = require('./db-adapter').insert;
+var dbUpdate = require('./db-adapter').update;
+var dbDelete = require('./db-adapter').deleteRow;
+var dbTransaction = require('./db-adapter').withTransaction;
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -265,7 +265,7 @@ module.exports = {
     */
    createDiscussion(communityId, postedByUserId, title, body, discussionCategoryId) {
       return dbInsert({
-         modelName: MAIN_MODEL,
+         '_modelName': MAIN_MODEL,
          discussion_category_id: discussionCategoryId,
          title: title,
          body: body,
@@ -288,7 +288,7 @@ module.exports = {
     */
    updateDiscussion(communityId, postedByUserId, discussionId, title, body, discussionCategoryId) {
       return dbUpdate({
-         modelName: MAIN_MODEL, // Model 
+         '_modelName': MAIN_MODEL, // Model 
          discussion_id: discussionId, // Where...
          // Values to update...
          discussion_category_id: discussionCategoryId,
@@ -327,7 +327,7 @@ module.exports = {
 
          .then(function() {
             return dbDelete({
-               modelName: MAIN_MODEL,
+               '_modelName': MAIN_MODEL,
                discussion_id: discussionId
             }, tx)
          })
@@ -352,7 +352,7 @@ module.exports = {
          //
 
          return dbInsert({
-            modelName: COMMENT_MODEL,
+            '_modelName': COMMENT_MODEL,
             discussion_id: discussionId,
             body: commentBody,
             posted_by_user_id: postedByUserId
@@ -376,7 +376,7 @@ module.exports = {
          .then(function(discussion) {
                let commentCount = discussion.toJSON().comment_count + 1;
                return dbUpdate({
-                  modelName: MAIN_MODEL,
+                  '_modelName': MAIN_MODEL,
                   discussion_id: discussionId,
                   comment_count: commentCount
                }, tx);
@@ -402,7 +402,7 @@ module.exports = {
          // First, delete the comment.
          //
          return dbDelete({
-            modelName: COMMENT_MODEL,
+            '_modelName': COMMENT_MODEL,
             discussion_comment_id: discussionCommentId
          }, tx)
 
@@ -422,7 +422,7 @@ module.exports = {
          .then(function(discussion) {
             let commentCount = discussion.toJSON().comment_count - 1;
             return dbUpdate({
-               modelName: MAIN_MODEL,
+               '_modelName': MAIN_MODEL,
                discussion_id: discussionId,
                comment_count: commentCount
             }, tx);

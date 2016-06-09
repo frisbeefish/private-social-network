@@ -13,12 +13,6 @@ var NotImplementedError = Errors.NotImplementedError;
 var NotFoundError = Errors.NotFoundError;
 
 
-//
-// The Data Service(s)
-//
-var PostsDS = require('../../dataServices').Posts;
-
-
 
 ///////////////////////////////////////////////////////////////////////////////////
 //
