@@ -1,18 +1,18 @@
+
+
 "use strict";
 
-let path = require('path');
-
-let db = require('./db').db;
+var db = require('./db').db;
 
 //
 // Require but don't save in a variable. This ensures that the models are loaded and added into
 // the bookshelf registry of models. These are models that are referenced by the model defined in this
 // file.
 //
-require('./sub_page');
-require('./page_post_subelement');
+//require('./website_message_recipient');
+//require('./user');
 
-let PagePost = db.Model.extend(
+var WebsiteMessageFolder = db.Model.extend(
 
    ///////////////////////////////////////////////////////////////////////////////////
    //
@@ -20,24 +20,16 @@ let PagePost = db.Model.extend(
    //
    ///////////////////////////////////////////////////////////////////////////////////
    {
-      tableName: 'page_post',
-      idAttribute: 'id', // Adding this made the binding not wrong
-
-      subPage: function() {
-         return this.belongsTo(db.model('SubPage'), 'sub_page_id');
-      },
+      tableName: 'website_message_folder',
+      idAttribute: 'id',
    },
-   
+
    ///////////////////////////////////////////////////////////////////////////////////
    //
    // THIS IS WHERE YOU DEFINE PUBLIC STATIC METHODS AVAILABLE ON THIS MODEL.
    //
    ///////////////////////////////////////////////////////////////////////////////////
    {
-      newRowDefaults: function() {
-         return {
-         }
-      }
    }
 );
 
@@ -49,4 +41,4 @@ let PagePost = db.Model.extend(
 // this technique, you'd find that you got cyclic references between models and things wouldn't work! So break the cycles
 // and add dynamic programming by embracing and using the Bookshelf JS "registry."
 //
-module.exports = db.model('PagePost', PagePost);
+module.exports = db.model('WebsiteMessageFolder', WebsiteMessageFolder);

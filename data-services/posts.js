@@ -7,11 +7,14 @@ var moment = require('moment');
 var Errors = require('../utils').Errors;
 var omit = require('../utils').Tools.omit;
 
+/*
 var PostEntry = require('../models').PostEntry;
 var Community = require('../models').Community;
+*/
 
+var Community = require('../models').Community;
 
-var dbList = require('./db-adapter').list;
+var dbGetList = require('./db-adapter').list;
 var dbGetOne = require('./db-adapter').get;
 var dbInsert = require('./db-adapter').insert;
 var dbUpdate = require('./db-adapter').update;
@@ -44,7 +47,7 @@ function getList(communityId,offset,limit,withRelated) {
    limit = limit || 10;
    withRelated = withRelated || {}
 
-   return dbList(
+   return dbGetList(
       MAIN_MODEL,                           // Model (the db table)
       [['community_id', '=', communityId]], // The where clause
       [["creation_date_time", "desc"]],     // The order by clause

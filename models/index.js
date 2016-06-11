@@ -14,5 +14,7 @@ module.exports = {
     PagePost : require('./page_post'),
     PagePostSubelement : require('./page_post_subelement'),
     SubPage : require('./sub_page'),
-    User : require('./user')
+    WebsiteMessage : require('./website_message'),
+    WebsiteMessageFolder : require('./website_message_folder'),
+    WebsiteMessageRecipient : require('./website_message_recipient')
 }

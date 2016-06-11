@@ -11,14 +11,15 @@ var UsersDS = require('./users');
 var Errors = require('../utils').Errors;
 var omit = require('../utils').Tools.omit;
 
-var Community = require('../models').Community;
+//var Community = require('../models').Community;
 
-var dbList = require('./db-adapter').list;
+var dbGetList = require('./db-adapter').list;
 var dbGetOne = require('./db-adapter').get;
 var dbInsert = require('./db-adapter').insert;
 var dbUpdate = require('./db-adapter').update;
 var dbDelete = require('./db-adapter').deleteRow;
 var dbTransaction = require('./db-adapter').withTransaction;
+
 
 module.exports = {
 
@@ -35,7 +36,7 @@ module.exports = {
       offset = offset || 0;
       limit = limit || 10;
 
-      return dbList(
+      return dbGetList(
          MAIN_MODEL, // Model (the db table)
          [], // The where clause
          [
@@ -108,7 +109,7 @@ module.exports = {
       offset = offset || 0;
       limit = limit || 10;
 
-      return dbList(
+      return dbGetList(
          DISCUSSION_CATEGORY_MODEL,            // Model (the db table)
          [['community_id', '=', communityId]], // The where clause
          [ ["name", "asc"] ],                  // The order by clause

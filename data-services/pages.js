@@ -5,15 +5,16 @@ const SUB_PAGE_MODEL = 'SubPage';
 const PAGE_POST_MODEL = 'PagePost';
 const PAGE_POST_SUB_ELEMENT_MODEL = 'PagePostSubelement';
 
-
+/*
 var Page = require('../models').Page;
 var SubPage = require('../models').SubPage;
 var PagePost = require('../models').PagePost;
 var PagePostSubelement = require('../models').PagePostSubelement;
+*/
 
 var Errors = require('../utils').Errors;
 
-var dbList = require('./db-adapter').list;
+var dbGetList = require('./db-adapter').list;
 var dbGetOne = require('./db-adapter').get;
 var dbInsert = require('./db-adapter').insert;
 var dbUpdate = require('./db-adapter').update;
@@ -121,7 +122,7 @@ module.exports = {
       offset = offset || 0;
       limit = limit || 10;
 
-      return dbList(
+      return dbGetList(
          MAIN_MODEL,                             // Model (the db table)
          [ ['community_id', '=', communityId] ], // The where clause
          [ ['page_type_id', 'asc'] ],            // The order by clause
@@ -241,7 +242,7 @@ module.exports = {
       //
 
       .then(function(pagePost) {
-         return dbList(
+         return dbGetList(
             PAGE_POST_SUB_ELEMENT_MODEL,           // Model (the db table)
             [ ['page_post_id', '=', pagePostId] ], // The where clause
             [ ['order_number', 'asc'] ],           // The order by clause

@@ -1,7 +1,9 @@
 "use strict";
 
-const MAIN_MODEL = 'Discussion';
-const COMMENT_MODEL = 'DiscussionComment';
+const MAIN_MODEL = 'WebsiteMessage';
+const WEBSITE_MESSAGE_FOLDER_MODEL = 'WebsiteMessageFolder';
+
+
 
 var moment = require('moment');
 var Errors = require('../utils').Errors;
@@ -11,11 +13,9 @@ var omit = require('../utils').Tools.omit;
 var Community = require('../models').Community;
 var Discussion = require('../models').Discussion;
 var DiscussionComment = require('../models').DiscussionComment;
-
+var DiscussionCategory = require('../models').DiscussionCategory;
 */
 
-var Community = require('../models').Community;
-var DiscussionCategory = require('../models').DiscussionCategory;
 
 var dbGetList = require('./db-adapter').list;
 var dbGetOne = require('./db-adapter').get;
@@ -86,6 +86,32 @@ function getDiscussionById(communityId, discussionId, withRelated) {
    });
 }
 
+let messageFolderNameToIdMap = {};
+
+(function() {
+
+try {
+   console.error('ABOUT TO LOAD FOLDERS LIST');
+   dbGetList(
+      WEBSITE_MESSAGE_FOLDER_MODEL
+   )
+   .then(function(folders) {
+      console.error('****** FOLDERS: ' + folders);
+      folders.toJSON().forEach(function(folder) {
+         messageFolderNameToIdMap[folder.name] = folder.id;
+      });
+      console.error('******** LOADED FOLDER NAMES: ' + JSON.stringify(messageFolderNameToIdMap))
+   })
+   .catch(function(err) {
+       console.error('Failed to load message folders list: ' + err);
+      // process.exit(0);
+   })
+} catch (exc) {
+       console.error('Failed to load message folders list: ' + exc);
+      // process.exit(0);
+
+}
+})();
 
 
 module.exports = {

@@ -5,13 +5,13 @@ const COMMUNITY_MODEL = 'Community';
 
 let CommunitiesDS = require('./communities');
 
-var User = require('../models').User;
+//var User = require('../models').User;
 
 var omit = require('../utils').Tools.omit;
 
 var Errors = require('../utils').Errors;
 
-var dbList = require('./db-adapter').list;
+var dbGetList = require('./db-adapter').list;
 var dbGetOne = require('./db-adapter').get;
 var dbInsert = require('./db-adapter').insert;
 var dbUpdate = require('./db-adapter').update;

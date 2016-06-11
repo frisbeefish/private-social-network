@@ -10,6 +10,12 @@ var Errors = require('../../utils').Errors;
 var NotImplementedError = Errors.NotImplementedError;
 
 
+//
+// The Data Service(s)
+//
+var MessagesDS = require('../../data-services').Messages;
+
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 //
