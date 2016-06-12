@@ -15,7 +15,7 @@ var NotFoundError = Errors.NotFoundError;
 //
 // The Data Service(s)
 //
-var DiscussionsDS = require('../../data-services').Discussions;
+var DiscussionsDS = require('../../data_services').Discussions;
 
 
 ///////////////////////////////////////////////////////////////////////////////////

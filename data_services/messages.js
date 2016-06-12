@@ -1,7 +1,11 @@
 "use strict";
 
-const MAIN_MODEL = 'Discussion';
-const COMMENT_MODEL = 'DiscussionComment';
+const MAIN_MODEL = 'WebsiteMessage';
+const WEBSITE_MESSAGE_FOLDER_MODEL = 'WebsiteMessageFolder';
+
+const INBOX_FOLDER = "Inbox"
+const SENT_FOLDER = "Sent"
+const SAVED_FOLDER = "Saved"
 
 var moment = require('moment');
 var Errors = require('../utils').Errors;
@@ -11,18 +15,16 @@ var omit = require('../utils').Tools.omit;
 var Community = require('../models').Community;
 var Discussion = require('../models').Discussion;
 var DiscussionComment = require('../models').DiscussionComment;
-
+var DiscussionCategory = require('../models').DiscussionCategory;
 */
 
-var Community = require('../models').Community;
-var DiscussionCategory = require('../models').DiscussionCategory;
 
-var dbGetList = require('./db-adapter').list;
-var dbGetOne = require('./db-adapter').get;
-var dbInsert = require('./db-adapter').insert;
-var dbUpdate = require('./db-adapter').update;
-var dbDelete = require('./db-adapter').deleteRow;
-var dbTransaction = require('./db-adapter').withTransaction;
+var dbGetList = require('./db_adapter').list;
+var dbGetOne = require('./db_adapter').get;
+var dbInsert = require('./db_adapter').insert;
+var dbUpdate = require('./db_adapter').update;
+var dbDelete = require('./db_adapter').deleteRow;
+var dbTransaction = require('./db_adapter').withTransaction;
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -86,23 +88,91 @@ function getDiscussionById(communityId, discussionId, withRelated) {
    });
 }
 
+//
+// This will contain a mapping of folder name to database id.
+//
+let messageFolderNameToIdMap = {};
+
+//
+// Load the list of folder names to database ids once.
+//
+(function() {
+   dbGetList(
+      WEBSITE_MESSAGE_FOLDER_MODEL
+   )
+   .then(function(folders) {
+      folders.toJSON().forEach(function(folder) {
+         messageFolderNameToIdMap[folder.name] = folder.id;
+      });
+   })
+   .catch(function(err) {
+       console.error('Failed to load message folders list: ' + err);
+       process.exit(0);
+   })
+})();
+
+/*
+  return new Promise( function (resolve,reject) {
+            models.WebsiteMessages.forge()
+            .query(function(q) {
+                q.where({
+                    community_id:community_id,
+                    recipient_id:user_id,
+                    website_message_folder_id:context.folder.id,
+                    deleted:"N"
+                })
+                .orderBy("sent_datetime","desc")
+                .offset(offset).limit(limit)
+            })
+            .fetch({withRelated: ["sentByUser"], require: true})
+            .then(function(messages) {
+                context.messages = messages;
+                resolve(context.messages);
+            })
+            .catch(reject);
+        });
+*/
 
 
 module.exports = {
 
    /**
-    * Returns a list of discussions from the database.
+    * Returns a list of inbox messages for the specified user in the specified community.
     *
-    * @param {number} communityId - The id of the community whose discussions will be returned.
+    * @param {number} communityId - The id of the community whose messages will be returned.
+    * @param {number} userId - The id of the user whose messages will be returned.
     * @param {number} offset - (Optional) the first row (of the SELECT) to return
     * @param {number} limit - (Optional) the number of rows to return
     *
-    * @return {Promise} A promise that returns the discussions as a a collection of {Model}.
+    * @return {Promise} A promise that returns the inbox messages as a a collection of {Model}.
     */
-   list(communityId, offset, limit) {
+   inboxMessages(communityId, userId, offset, limit) {
+
+       offset = offset || 0;
+       limit = limit || 10;
+       
+
+       return dbGetList(
+          MAIN_MODEL, // Model (the db table)
+          [
+             ['community_id', '=', communityId],
+             ['recipient_id', '=', userId],
+             ['website_message_folder_id', '=', messageFolderNameToIdMap[INBOX_FOLDER],
+             ['deleted', '=', 'N'] ]
+          ], // The where clause
+          [
+             ["sent_datetime", "desc"]
+          ], // The order by clause
+          {withRelated:['recipient','sentByUser']}, // Load these relations as well...
+          offset, limit
+       );
+
+    /*
       return getList(communityId, offset, limit, {
          withRelated: ['postedByUser', 'category', 'comments']
       });
+    */
+
    },
 
    /**

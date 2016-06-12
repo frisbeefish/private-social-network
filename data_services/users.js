@@ -11,12 +11,12 @@ var omit = require('../utils').Tools.omit;
 
 var Errors = require('../utils').Errors;
 
-var dbGetList = require('./db-adapter').list;
-var dbGetOne = require('./db-adapter').get;
-var dbInsert = require('./db-adapter').insert;
-var dbUpdate = require('./db-adapter').update;
-var dbDelete = require('./db-adapter').deleteRow;
-var dbTransaction = require('./db-adapter').withTransaction;
+var dbGetList = require('./db_adapter').list;
+var dbGetOne = require('./db_adapter').get;
+var dbInsert = require('./db_adapter').insert;
+var dbUpdate = require('./db_adapter').update;
+var dbDelete = require('./db_adapter').deleteRow;
+var dbTransaction = require('./db_adapter').withTransaction;
 
 
 ///////////////////////////////////////////////////////////////////////////////////

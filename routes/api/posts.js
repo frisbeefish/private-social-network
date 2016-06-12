@@ -15,7 +15,7 @@ var NotFoundError = Errors.NotFoundError;
 //
 // The Data Service(s)
 //
-var PostsDS = require('../../data-services').Posts;
+var PostsDS = require('../../data_services').Posts;
 
 
 

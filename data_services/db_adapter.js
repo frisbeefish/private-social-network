@@ -91,8 +91,8 @@ module.exports = {
      * if the 'withRelated' value is not empty.
      *
      * @param {string} modelName - The name of the {Model} for the main table whose rows will be returned.
-     * @param {array} where - Array of where clause statements in this sort of form: ['user_id', '=', 5]
-     * @param {array} orderBy - Array of order clause statements in this sort of form: ['created_datetime', 'asc']
+     * @param {array} where - (Optional) Array of where clause statements in this sort of form: ['user_id', '=', 5]
+     * @param {array} orderBy - (Optional) Array of order clause statements in this sort of form: ['created_datetime', 'asc']
      * @param {object} withRelated - (Optional) This can be undefined, or {}, or contain values to pass into the Bookshelf JS 'fetch' function.
      * @param {number} offset - (Optional) If this has a value, it contains the OFFSET portion of a SELECT statement.
      * @param {number} limit - (Optional) If this has a value, it contains the LIMIT portion of a SELECT statement.
@@ -100,6 +100,8 @@ module.exports = {
      * @return {Promise} A promise that returns the rows as a a collection of {Model} objects.
      */
     list(modelName,where,orderBy,withRelated,offset,limit) {
+        where = where || []
+        orderBy = orderBy || []
         withRelated = withRelated || {}
         return db.model(modelName).collection().query(function(q) {configListQuery(q,where,orderBy,offset,limit)})
         .fetch(withRelated);

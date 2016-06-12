@@ -12,7 +12,7 @@ var NotImplementedError = Errors.NotImplementedError;
 //
 // The Data Service(s)
 //
-var UsersDS = require('../../data-services').Users;
+var UsersDS = require('../../data_services').Users;
 
 
 

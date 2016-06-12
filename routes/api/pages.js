@@ -14,7 +14,7 @@ var NotImplementedError = Errors.NotImplementedError;
 //
 // The Data Service(s)
 //
-var PagesDS = require('../../data-services').Pages;
+var PagesDS = require('../../data_services').Pages;
 
 
 ///////////////////////////////////////////////////////////////////////////////////

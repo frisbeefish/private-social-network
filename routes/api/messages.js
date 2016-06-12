@@ -13,7 +13,7 @@ var NotImplementedError = Errors.NotImplementedError;
 //
 // The Data Service(s)
 //
-var MessagesDS = require('../../data-services').Messages;
+var MessagesDS = require('../../data_services').Messages;
 
 
 
@@ -32,7 +32,17 @@ var MessagesDS = require('../../data-services').Messages;
  * Example Url GET: /api/messages/inbox
  */
 router.get('/inbox', function(req, res, next) {
-    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+
+    let communityId = req.communityId;
+    let userId = req.userId;
+
+    MessagesDS.inboxMessages(communityId,userId,parseInt(req.query.offset),parseInt(req.query.limit)).then(function(messages) {
+        res.json(messages);
+    }).catch( err => {
+        next(err) 
+    });
+
+   // next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
 });
 
 

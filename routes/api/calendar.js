@@ -18,7 +18,7 @@ var NotImplementedError = Errors.NotImplementedError;
 //
 // The Data Service(s)
 //
-var CalendarDS = require('../../data-services').Calendar;
+var CalendarDS = require('../../data_services').Calendar;
 
 
 ///////////////////////////////////////////////////////////////////////////////////

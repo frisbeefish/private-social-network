@@ -14,10 +14,16 @@ var httputils = require('./utils');
 
 describe('Messages', function() {
 
+    let firstMessageId = null;
+
     it('- get all inbox messages', function(done) {
         httputils.get('/api/messages/inbox', function(err, res, body) {
-            expect(res.statusCode).to.equal(404);
-            expect(res.body.message).to.include('Not Implemented');
+            expect(res.statusCode).to.equal(200);
+            firstMessageId = body[0].id;
+            console.error('FIRST MESSAGE ID: ' + firstMessageId);
+            //console.log('BODY: ' + body);
+            //var messages = JSON.parse(res.body);
+            //console.error(messages);
             done();
         });
     });
