@@ -147,10 +147,8 @@ module.exports = {
     * @return {Promise} A promise that returns the inbox messages as a a collection of {Model}.
     */
    inboxMessages(communityId, userId, offset, limit) {
-
        offset = offset || 0;
        limit = limit || 10;
-       
 
        return dbGetList(
           MAIN_MODEL, // Model (the db table)
@@ -166,14 +164,125 @@ module.exports = {
           {withRelated:['recipient','sentByUser']}, // Load these relations as well...
           offset, limit
        );
+   },
 
-    /*
-      return getList(communityId, offset, limit, {
-         withRelated: ['postedByUser', 'category', 'comments']
-      });
-    */
+   getInboxMessage(messageId) {
+
+       return dbGetOne(MAIN_MODEL, [
+          ['id', '=', messageId]
+       ],{withRelated:['recipient','recipients','sentByUser']})
+
+       //
+       // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+       //
+       .catch(function(err) {
+          console.error(err);
+          return Promise.reject(new Errors.NotFoundError('No message found with the specified id'));
+       });
 
    },
+
+   /**
+    * Returns a list of outbox messages for the specified user in the specified community.
+    *
+    * @param {number} communityId - The id of the community whose messages will be returned.
+    * @param {number} userId - The id of the user whose messages will be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the outbox messages as a a collection of {Model}.
+    */
+   outboxMessages(communityId, userId, offset, limit) {
+       offset = offset || 0;
+       limit = limit || 10;
+
+       return dbGetList(
+          MAIN_MODEL, // Model (the db table)
+          [
+             ['community_id', '=', communityId],
+             ['sent_by_user_id', '=', userId],
+             ['website_message_folder_id', '=', messageFolderNameToIdMap[SENT_FOLDER],
+             ['deleted', '=', 'N'] ]
+          ], // The where clause
+          [
+             ["sent_datetime", "desc"]
+          ], // The order by clause
+          {withRelated:['recipient','sentByUser']}, // Load these relations as well...
+          offset, limit
+       );
+   },
+
+
+   getOutboxMessage(messageId) {
+
+       return dbGetOne(MAIN_MODEL, [
+          ['id', '=', messageId]
+       ],{withRelated:['recipient','recipients','sentByUser']})
+
+       //
+       // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+       //
+       .catch(function(err) {
+          console.error(err);
+          return Promise.reject(new Errors.NotFoundError('No message found with the specified id'));
+       });
+
+   },
+
+
+   /**
+    * Returns a list of saved messages for the specified user in the specified community.
+    *
+    * @param {number} communityId - The id of the community whose messages will be returned.
+    * @param {number} userId - The id of the user whose messages will be returned.
+    * @param {number} offset - (Optional) the first row (of the SELECT) to return
+    * @param {number} limit - (Optional) the number of rows to return
+    *
+    * @return {Promise} A promise that returns the saved messages as a a collection of {Model}.
+    */
+   savedMessages(communityId, userId, offset, limit) {
+       offset = offset || 0;
+       limit = limit || 10;
+
+       return dbGetList(
+          MAIN_MODEL, // Model (the db table)
+          [
+             ['community_id', '=', communityId],
+
+             //
+             // Raw where clause for now.
+             //
+             ` ( ( recipient_id = ${user_id} AND original_sent_email_message_id IS NOT NULL ) OR ( sent_by_user_id = ${user_id} AND original_sent_email_message_id IS NULL ) ) `,
+             
+
+             ['website_message_folder_id', '=', messageFolderNameToIdMap[SAVED_FOLDER],
+             ['deleted', '=', 'N'] ]
+          ], // The where clause
+          [
+             ["sent_datetime", "desc"]
+          ], // The order by clause
+          {withRelated:['recipient','sentByUser']}, // Load these relations as well...
+          offset, limit
+       );
+   },
+
+
+   getSavedMessage(messageId) {
+
+       return dbGetOne(MAIN_MODEL, [
+          ['id', '=', messageId]
+       ],{withRelated:['recipient','recipients','sentByUser']})
+
+       //
+       // Rather than returning the default error created by Bookshelf JS, we'll return our own error.
+       //
+       .catch(function(err) {
+          console.error(err);
+          return Promise.reject(new Errors.NotFoundError('No message found with the specified id'));
+       });
+
+   },
+
 
    /**
     * Returns a discussion based on its id.

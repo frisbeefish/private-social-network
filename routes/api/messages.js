@@ -32,7 +32,6 @@ var MessagesDS = require('../../data_services').Messages;
  * Example Url GET: /api/messages/inbox
  */
 router.get('/inbox', function(req, res, next) {
-
     let communityId = req.communityId;
     let userId = req.userId;
 
@@ -41,8 +40,6 @@ router.get('/inbox', function(req, res, next) {
     }).catch( err => {
         next(err) 
     });
-
-   // next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
 });
 
 
@@ -52,7 +49,16 @@ router.get('/inbox', function(req, res, next) {
  * Example Url GET: /api/messages/inbox/123
  */
 router.get('/inbox/:messageId', function(req, res, next) {
-    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+
+    let communityId = req.communityId;
+    let userId = req.userId;
+    let messageId = req.params.messageId;
+
+    MessagesDS.getInboxMessage(messageId).then(function(message) {
+        res.json(message);
+    }).catch( err => {
+        next(err) 
+    });
 });
 
 
@@ -102,7 +108,17 @@ router.delete('/inbox/:messageId', function(req, res, next) {
  * Example Url GET: /api/messages/outbox
  */
 router.get('/outbox', function(req, res, next) {
+    let communityId = req.communityId;
+    let userId = req.userId;
+
+    MessagesDS.outboxMessages(communityId,userId,parseInt(req.query.offset),parseInt(req.query.limit)).then(function(messages) {
+        res.json(messages);
+    }).catch( err => {
+        next(err) 
+    });
+/*
     next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+*/
 });
 
 
@@ -112,6 +128,8 @@ router.get('/outbox', function(req, res, next) {
  * Example Url POST: /api/messages/outbox
  */
 router.post('/outbox', function(req, res, next) {
+
+
     next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
 });
 
@@ -122,7 +140,19 @@ router.post('/outbox', function(req, res, next) {
  * Example Url GET: /api/messages/outbox/123
  */
 router.get('/outbox/:messageId', function(req, res, next) {
-    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+
+    let communityId = req.communityId;
+    let userId = req.userId;
+    let messageId = req.params.messageId;
+
+    MessagesDS.getOutboxMessage(messageId).then(function(message) {
+        res.json(message);
+    }).catch( err => {
+        next(err) 
+    });
+
+
+   // next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
 });
 
 
@@ -142,7 +172,17 @@ router.delete('/outbox/:messageId', function(req, res, next) {
  * Example Url GET: /api/messages/saved
  */
 router.get('/saved', function(req, res, next) {
-    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+
+    let communityId = req.communityId;
+    let userId = req.userId;
+
+    MessagesDS.outboxMessages(communityId,userId,parseInt(req.query.offset),parseInt(req.query.limit)).then(function(messages) {
+        res.json(messages);
+    }).catch( err => {
+        next(err) 
+    });
+
+    //next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
 });
 
 
@@ -152,7 +192,19 @@ router.get('/saved', function(req, res, next) {
  * Example Url GET: /api/messages/saved/123
  */
 router.get('/saved/:messageId', function(req, res, next) {
-    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+
+    let communityId = req.communityId;
+    let userId = req.userId;
+    let messageId = req.params.messageId;
+
+    MessagesDS.getSavedMessage(messageId).then(function(message) {
+        res.json(message);
+    }).catch( err => {
+        next(err) 
+    });
+
+
+ //   next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
 });
 
 

@@ -24,6 +24,22 @@ var WebsiteMessage = db.Model.extend(
       tableName: 'website_message',
       idAttribute: 'id',
 
+
+      recipients: function() {
+
+         //
+         // Some craziness trying to understand this. So this returns all "user" rows linked to this "website_message"
+         // row through the "website_message_recipient" table.
+         //
+         // Parms: 
+         //    (1) User table, 
+         //    (2) linking table => "website_message_recipient", 
+         //    (3) FK from "website_message_recipient" that references this "website_message" row,
+         //    (4) FK from "website_message_recipient" that references a row in "user"
+         //
+         return this.belongsToMany(db.model('User'), 'website_message_recipient', 'website_message_id','user_id');
+      },
+
       recipient: function() {
          return this.hasOne(db.model('WebsiteMessageRecipient'), 'website_message_id'); // THIS WAS THE MAGIC!! Needed this parameter at the end.
       },

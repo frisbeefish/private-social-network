@@ -37,9 +37,17 @@ var db = require('../models').db;
 function configureQueryWhereClause(q,where) {
    where.forEach((whereClause,idx) => {
       if (idx === 0) {
-         q.where.apply(q,whereClause);
+         if (Array.isArray(where)) {
+            q.where.apply(q,whereClause);
+         } else {
+            q.whereRaw.apply(q,whereClause);
+         }
       } else {
-         q.andWhere.apply(q,whereClause);
+         if (Array.isArray(where)) {
+            q.andWhere.apply(q,whereClause);
+         } else {
+            q.andWhereRaw.apply(q,whereClause);
+         }
       }
    });    
 }
