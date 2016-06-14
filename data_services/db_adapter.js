@@ -93,6 +93,26 @@ module.exports = {
        });
     },
 
+/*
+'favorite_color', '<>', 'green'
+{favorite_color: 'red', shoe_size: 12}
+*/
+
+    count(modelName,where,tx) {
+       //let model = db.model(modelName);
+
+       // withRelated = withRelated || {};
+        let model = tx ? tx.model(modelName) : db.model(modelName);
+        //withRelated.require = true;
+        //if (tx) {
+        //   withRelated.transacting = tx;
+       // }
+        return model.query(function(q) {configureQueryWhereClause(q,where)} )
+        .count('*'); //fetch(withRelated);
+
+      // where = 
+       //return model.where('id','=',300).count('*');
+    },
 
    /**
      * This executes a SELECT statement against a database table. It might also contain JOINs/subqueries 

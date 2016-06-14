@@ -53,11 +53,12 @@ describe('Messages', function() {
 
     let messageId = null;
 
+/*
     it('- send message', function(done) {
         httputils.postJson('/api/messages/outbox', {
             subject:'TEST Hi this is a message from test',
             body:'Hi this is the body',
-            to:[2,140] // Charmian and support
+            to:[1,2,140] // Charmian and support
         }, function(err, res, body) {
             expect(res.statusCode).to.equal(200);
             console.log('CREATED THIS MESSAGE: ' + body);
@@ -66,15 +67,8 @@ describe('Messages', function() {
             done();
         });
     });
+*/
 
-
-    it('- get replies to one inbox message', function(done) {
-        httputils.get('/api/messages/inbox/123/replies', function(err, res, body) {
-            expect(res.statusCode).to.equal(404);
-            expect(res.body.message).to.include('Not Implemented');
-            done();
-        });
-    });
 
     it('- reply to inbox message', function(done) {
         httputils.postJson('/api/messages/inbox/123/replies', {}, function(err, res, body) {
@@ -84,14 +78,44 @@ describe('Messages', function() {
         });
     });
 
-    it('- delete inbox message', function(done) {
-        httputils.deleteJson('/api/messages/inbox/123', {}, function(err, res, body) {
+    it('- get replies to one inbox message', function(done) {
+        httputils.get('/api/messages/inbox/123/replies', function(err, res, body) {
             expect(res.statusCode).to.equal(404);
             expect(res.body.message).to.include('Not Implemented');
             done();
         });
     });
 
+
+    
+
+    it('- delete inbox message', function(done) {
+        messageId = 23402;
+        httputils.deleteJson('/api/messages/inbox/' + messageId, {}, function(err, res, body) {
+            expect(res.statusCode).to.equal(200);
+            console.log('RESPONSE: ' + body);
+            done();
+        });
+    });
+
+    
+
+    it('- delete inbox message', function(done) {
+        messageId = 23403;
+        httputils.deleteJson('/api/messages/inbox/' + messageId, {}, function(err, res, body) {
+            expect(res.statusCode).to.equal(200);
+            console.log('RESPONSE: ' + body);
+            done();
+        });
+    });
+
+    it('- delete INVALID inbox message', function(done) {
+        httputils.deleteJson('/api/messages/inbox/99999' + messageId, {}, function(err, res, body) {
+            expect(res.statusCode).to.equal(404);
+            console.log('RESPONSE: ' + JSON.stringify(body));
+            done();
+        });
+    });
 
     it('- get all outbox messages', function(done) {
         httputils.get('/api/messages/outbox', function(err, res, body) {

@@ -59,7 +59,14 @@ var WebsiteMessage = db.Model.extend(
          return {
             sent_datetime: new Date(),
          }
+      },
+
+      constructPrimaryKey : function(rowData) {
+          return {
+              id:rowData.id
+          }
       }
+
    }
 );
 

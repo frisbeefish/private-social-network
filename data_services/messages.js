@@ -20,6 +20,7 @@ var DiscussionCategory = require('../models').DiscussionCategory;
 */
 
 
+var dbCount = require('./db_adapter').count;
 var dbGetList = require('./db_adapter').list;
 var dbGetOne = require('./db_adapter').get;
 var dbInsert = require('./db_adapter').insert;
@@ -258,6 +259,278 @@ module.exports = {
       });
    },
 
+/*
+            //
+            // STEP 1: Get the message to delete.
+            //
+            var getMessageToDelete = function() { 
+                return new Promise( function (resolve,reject) {
+                    getWebsiteMessageById(id)
+                    .then( function (message) {
+                        message = message.toJSON();
+                        if (message.recipient_id != user_id) {
+                           reject("Illegal access. You do not own this email");
+                        } else {
+
+
+             //
+             // Get the "progenitor/original" email from which the one to be deleted was cloned.
+             // "originalMessage" will be that original email.
+             //
+             if (!message.original_sent_email_message_id) {
+                  resolve(
+                      {
+                          message:message,
+                          originalMessage:message
+                      }
+                  );
+             } else {
+                  getWebsiteMessageById(message.original_sent_email_message_id)
+                  .then(function(originalMessage) {
+                      resolve(
+                          {
+                              message:message,
+                              originalMessage:originalMessage.toJSON()}
+                      );
+                  })
+                  .catch(reject);
+             }
+
+
+            //
+            // STEP 2. Mark the message as "deleted" so that it no longer shows up in the user's UI.
+            //
+            var markMessageAsDeleted = function(context) { 
+                return new Promise( function (resolve,reject) {
+                    dbcalls.update(models.WebsiteMessage,{id:context.message.id},{deleted:"Y"})
+                    .then( function () {
+                        //console.log("MESSAGE: " + context.message);
+                        //console.log("ORIG originalMessage: " + context.originalMessage);
+                        resolve(context);
+                    })
+                    .catch(reject);
+                });
+            }
+
+
+
+            //
+            // STEP 3. How many sibling clones are still undeleted? If 0, then we might be ready to do special processing.
+            //
+            var getCountOfUndeletedSiblingEmails = function(context) { 
+                return new Promise( function (resolve,reject) {
+                    console.log ("CONTEXT: " + context);
+                    console.log(" context.originalMessage: " + context.originalMessage );
+                    dbcalls.getCountWhere(models.WebsiteMessages,{
+                        deleted:"N",
+                        original_sent_email_message_id:context.originalMessage.id
+                    })
+                    .then( function (count) {
+                        context.numberOfUndeletedSiblings = count;
+                        resolve(context);
+                    })
+                    .catch(reject);
+                });
+            }
+
+
+            //
+            // STEP 4. If there are no more siblings, then we can delete all the sibling emails
+            // as well as this one.
+            //
+            var deleteMessageAndAllSiblingMessagesIfPossible = function(context) { 
+                return new Promise( function (resolve,reject) {
+                    if (context.numberOfUndeletedSiblings > 0) {
+                        resolve("Cannot delete yet. There are still siblings");
+                    } else {
+                       // resolve("CAN NOW DELETE. There are still siblings");
+                        var originalMessageId = context.originalMessage.id;
+
+                        dbcalls.selectWhereRaw(models.WebsiteMessages,
+                            `original_sent_email_message_id = ${originalMessageId} or id = ${originalMessageId}`,
+                            "recipient_id")
+
+                        .then(function(messages) {
+                           
+                            console.log("HAVE MESSAGES");
+
+                           //
+                           // Not the most efficient. This goes out and does a DELETE of message one at a time.
+                           // I just couldn't think any more. So this works for now. A WHERE would be better. But I'm too
+                           // lazy today!
+                           //
+                           // deleteWithoutRelated
+                           //          
+                           var deleteMessageAndRecipientRowPromises = messages.map(function(message) {
+                              return new Promise( function (resolve,reject) {
+                                  var website_message_id = message.get("id");
+                                  var recipient_id = message.get("recipient_id");
+
+    //
+    // HACK. NEEDED TO DO IT THIS WAY BECAUSE Bookshelf WAS FIGHTING WITH ME.
+    //
+                                  knex("website_message_recipient").where({
+                                     website_message_id,
+                                     user_id:recipient_id
+                                  }).del()
+                                  .then(function (numRows) {
+                                    console.log(numRows + ' linking rows have been deleted');
+                                    dbcalls.deleteWithoutRelated(models.WebsiteMessage,{id:website_message_id})
+                                    .then(resolve).catch(reject)
+                                  }).catch(function (err) {
+                                    console.log(err);
+                                    reject(err);
+                                  });
+
+                              });
+                           });
+                           Promise.all(deleteMessageAndRecipientRowPromises).then(resolve).catch(reject);
+                        })
+                        .catch(reject)
+                    }
+                });
+            }
+
+*/
+
+   deleteMessage(communityId, userId, messageId) {
+
+      return dbTransaction(function(tx) {
+
+         let messageToDelete = null;
+         let firstMessageInThread = null;
+
+         //
+         // 1. Get the message that will be deleted.
+         //
+         return dbGetOne(MAIN_MODEL, [
+            ['id', '=', messageId],
+            ['recipient_id', '=', userId]
+         ],{require:true})
+
+
+         //
+         // 2. Get references to the message to delete and the original message (the one that was 
+         //    the parent of the one to delete).
+         //
+         .then(function(message) {
+            messageToDelete = message;
+            //
+            // If the message has no 'original message,' then it is the first one in the thread.
+            //
+            if (!message.get('original_sent_email_message_id')) {
+               firstMessageInThread = message;
+               return Promise.resolve(true);
+            //
+            // Otherwise, we need to look up the first one in the thread and get it from the database.
+            //
+            } else {
+               return dbGetOne(MAIN_MODEL, [
+                  ['id', '=', messageToDelete.get('original_sent_email_message_id')]
+                  ],{require:true})
+               .then(function(message) {
+                  firstMessageInThread = message;
+               })
+            }
+         })
+
+         //
+         // 3. Mark the message as "deleted" so that it no longer shows up in the user's UI.
+         //
+         .then(function() {
+            return dbUpdate({
+               '_modelName':MAIN_MODEL,  // Model 
+               id:messageId,             // Where...
+               deleted:'Y'               // Values to update.
+            },tx);
+         })
+
+         //
+         // 4. Get a count of the number of sibling emails (to the one being deleted) that have not
+         //    yet been deleted. If all the siblings have been deleted, this value will be zero.
+         //
+         .then(function() {
+            return dbCount(MAIN_MODEL,
+              [['deleted', '=', 'N'], ['original_sent_email_message_id', '=', firstMessageInThread.get('id') ]]
+            )
+         })
+
+/*
+            var getCountOfUndeletedSiblingEmails = function(context) { 
+                return new Promise( function (resolve,reject) {
+                    console.log ("CONTEXT: " + context);
+                    console.log(" context.originalMessage: " + context.originalMessage );
+                    dbcalls.getCountWhere(models.WebsiteMessages,{
+                        deleted:"N",
+                        original_sent_email_message_id:context.originalMessage.id
+                    })
+                    .then( function (count) {
+                        context.numberOfUndeletedSiblings = count;
+                        resolve(context);
+                    })
+                    .catch(reject);
+                });
+            }
+
+*/
+
+
+         .then(function(message) {
+console.error('RESPONSE FROM COUNT: ' + message);
+            return Promise.resolve(true);
+         })
+         .catch(function(err) {
+            if (err.message === 'EmptyResponse') {
+               return Promise.reject(new Errors.NotFoundError('No message found with the specified id'));
+            } else {
+               return Promise.reject(err);
+            }            
+         })
+
+/*
+         .catch(function(err) {
+
+            return Promise.reject(new Errors.NotFoundError('No discussion found with the specified id'));
+
+         })
+*/
+
+
+/*
+         //
+         // First, delete the comment.
+         //
+         return dbDelete({
+            '_modelName': COMMENT_MODEL,
+            discussion_comment_id: discussionCommentId
+         }, tx)
+
+         //
+         // Then, get the discussion whose comment was deleted.
+         //
+
+         .then(function() {
+            return dbGetOne(MAIN_MODEL, [
+               ['discussion_id', '=', discussionId]
+            ])
+         })
+
+         //
+         // Then decrement the comment_count of the discussion by one.
+         //
+         .then(function(discussion) {
+            let commentCount = discussion.toJSON().comment_count - 1;
+            return dbUpdate({
+               '_modelName': MAIN_MODEL,
+               discussion_id: discussionId,
+               comment_count: commentCount
+            }, tx);
+         })
+  */
+
+      });
+
+   },
 
    /**
     * Returns a list of outbox messages for the specified user in the specified community.
@@ -406,5 +679,5 @@ module.exports = {
          })
       });
    }
-   
+
 }

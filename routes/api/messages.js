@@ -119,7 +119,20 @@ router.patch('/inbox/:messageId', function(req, res, next) {
  * Example Url DELETE: /api/messages/inbox/123
  */
 router.delete('/inbox/:messageId', function(req, res, next) {
-    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
+
+    let communityId = req.communityId;
+    let userId = req.userId;
+    let messageId = req.params.messageId;
+
+
+    MessagesDS.deleteMessage(communityId,userId,messageId).then(function(retval) {
+        res.json(retval);
+    }).catch( err => {
+        next(err) 
+    });
+
+
+    
 });
 
 
