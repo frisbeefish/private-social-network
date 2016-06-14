@@ -1,6 +1,7 @@
 "use strict";
 
 const MAIN_MODEL = 'WebsiteMessage';
+const WEBSITE_MESSAGE_RECIPIENT_MODEL = 'WebsiteMessageRecipient';
 const WEBSITE_MESSAGE_FOLDER_MODEL = 'WebsiteMessageFolder';
 
 const INBOX_FOLDER = "Inbox"
@@ -33,6 +34,72 @@ var dbTransaction = require('./db_adapter').withTransaction;
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+
+function createWebsiteMessage (tx,communityId,sentByUserId, recipientId, websiteMessageFolderId,
+    subject, body, originalSentEmailMessageId) {
+
+   console.error('CREATE MESSAGE');
+
+   return dbInsert({ 
+      '_modelName':MAIN_MODEL, 
+      community_id:communityId,
+      sent_by_user_id:sentByUserId, 
+      recipient_id:recipientId, 
+      website_message_folder_id:websiteMessageFolderId, 
+      subject,
+      body, 
+      original_sent_email_message_id:originalSentEmailMessageId 
+   });
+}
+
+         //
+         // 2. Get the sent message's id. Now, for each recipient:
+         //
+         //    2.a. Create a message in the recipient's inbox.
+         //
+         //    2.b. Create a website_message_recipient row.
+         //
+
+function sendMessageToRecipient(tx,communityId,sentByUserId, recipientUserId,subject, body, sentEmailMessageId) {
+   return new Promise(function(resolve,reject) {
+      //
+      // First, add the message to the recipient's inbox.
+      //
+      return createWebsiteMessage (tx,communityId,sentByUserId, recipientUserId, 
+         messageFolderNameToIdMap[INBOX_FOLDER], subject, body, sentEmailMessageId)
+
+      //
+      // Now, create a 'website_message_recpient' row that links the message to the recipient.
+      //
+      .then(function(message) {
+         return dbInsert({ '_modelName':WEBSITE_MESSAGE_RECIPIENT_MODEL,
+            website_message_id:message.get('id'),user_id:recipientUserId});
+      })
+
+      .then(function() {
+         resolve();
+      })
+
+      .catch( function(err) {
+         reject(err);
+      })
+   })
+}
+
+
+function sendMessageToRecipients(tx, communityId, sentByUserId, allRecipientUserIds ,subject, body, sentEmailMessageId) {
+    let promises = [];
+    allRecipientUserIds.forEach(function(recipientUserId) {
+       let sentToOneUserPromise = sendMessageToRecipient(tx,communityId,sentByUserId, recipientUserId,
+          subject, body, sentEmailMessageId);
+       promises.push(sentToOneUserPromise);
+    });
+
+    //
+    // Send all of the messages to all of the recipients here.
+    //
+    return Promise.all(promises);
+}
  
 /**
  * Returns a list of discussions from the database.
@@ -111,27 +178,6 @@ let messageFolderNameToIdMap = {};
    })
 })();
 
-/*
-  return new Promise( function (resolve,reject) {
-            models.WebsiteMessages.forge()
-            .query(function(q) {
-                q.where({
-                    community_id:community_id,
-                    recipient_id:user_id,
-                    website_message_folder_id:context.folder.id,
-                    deleted:"N"
-                })
-                .orderBy("sent_datetime","desc")
-                .offset(offset).limit(limit)
-            })
-            .fetch({withRelated: ["sentByUser"], require: true})
-            .then(function(messages) {
-                context.messages = messages;
-                resolve(context.messages);
-            })
-            .catch(reject);
-        });
-*/
 
 
 module.exports = {
@@ -181,6 +227,37 @@ module.exports = {
        });
 
    },
+
+   sendMessage(communityId,sentByUserId,to,subject,body) {
+      return dbTransaction(function(tx) {
+
+         let sentMessage = null;
+         let sentEmailMessageId = null;
+
+         //
+         // 1. Create "sent" message in sender's "sent" folder.
+         //
+         return createWebsiteMessage (tx,communityId,sentByUserId, sentByUserId, messageFolderNameToIdMap[SENT_FOLDER],
+            subject, body)
+
+         //
+         // 2. Send a message to each recipient.
+         //
+         .then(function(message) {
+            sentMessage = message;
+            sentEmailMessageId = message.get('id');
+            return sendMessageToRecipients(tx, communityId, sentByUserId, to,subject, body, sentEmailMessageId)
+         } )
+
+         //
+         // Once those tasks are done, return the newly created/sent message to the client.
+         //
+         .then(function() {
+            return Promise.resolve(sentMessage);
+         } )
+      });
+   },
+
 
    /**
     * Returns a list of outbox messages for the specified user in the specified community.
@@ -284,291 +361,8 @@ module.exports = {
    },
 
 
-   /**
-    * Returns a discussion based on its id.
-    * 
-    * @param {number} communityId - The id of the community whose discussion.
-    * @param {number} discussionId - The id of the discussion to return.
-    *
-    * @return {Promise} A promise that returns a {Model} for the returned discussion.
-    */
-   get(communityId, discussionId) {
-      return getDiscussionById(communityId, discussionId, {
-         withRelated: ['category', 'comments', 'postedByUser']
-      });
-   },
-
-   /**
-    * Returns a discussion's comments.
-    * 
-    * @param {number} communityId - The id of the community containing the discussion.
-    * @param {number} discussionId - The id of the discussion whose comments will be returned.
-    *
-    * @return {Promise} A promise that returns a collection {Model} containing the comments.
-    */
-   comments(communityId, discussionId) {
-      return new Promise(function(resolve, reject) {
-         getDiscussionById(communityId, discussionId)
-            .then(function(discussion) {
-               return discussion.commentsSorted()
-            })
-            .then(function(comments) {
-               return resolve(comments);
-            }).catch(function(err) {
-               return reject(err);
-            });
-      });
-   },
 
 
-   /**
-    * Returns a list of recent discussions posted and comments to discussions.
-    *
-    * @param {number} communityId - The id of the community whose discussions activity will be returned.
-    * @param {number} offset - (Optional) The first row (of the SELECT) to return.
-    * @param {number} limit - (Optional) The number of rows to return.
-    *
-    * @return {array} An array of {object} - each of which represents a recently posted discussion or comment.
-    */
-   recentActivity(communityId, offset, limit) {
-
-      offset = offset || 0;
-      limit = limit || 10;
-
-      return new Promise(function(resolve, reject) {
-
-         //
-         // Concurrently grab the list of recent posts and the list of recent comments.
-         // Think of these 2 queries as running in parallel.
-         //
-         let promises = [
-            //
-            // Get the top posts
-            //
-            getList(communityId, offset, limit, {
-               withRelated: ['postedByUser']
-            }),
-            //
-            // Get the top comments to posts
-            //
-            new Community({
-               community_id: communityId
-            }).discussionCommentsSorted(offset, limit)
-         ];
-
-         Promise.all(promises).then(function(values) {
-
-            //
-            // Fill "recentActivity" with discussions and comments. Normalize the data and only include the fields
-            // that the front-end cares about for the "recent activity" list view.
-            //
-            let recentActivity = values[0].map(function(discussion) {
-               discussion = discussion.toJSON()
-               return {
-                  discussion_id: discussion.discussion_id,
-                  title: discussion.title,
-                  type: 'discussion',
-                  creationDateTime: discussion.creation_date_time,
-                  postedByUser: omit(discussion.postedByUser, 'password'),
-                  debugDateTime: String(moment.utc(discussion.creation_date_time).toDate()),
-                  momentDateTime: moment.utc(discussion.creation_date_time)
-               }
-            });
-            recentActivity = recentActivity.concat(
-               values[1].map(function(comment) {
-                  comment = comment.toJSON()
-                  return {
-                     discussion_comment_id: comment.discussion_comment_id,
-                     discussion_id: comment.discussion_id,
-                     title: comment.body,
-                     type: 'comment',
-                     creationDateTime: comment.creation_date_time,
-                     postedByUser: omit(comment.postedByUser, 'password'),
-                     debugDateTime: String(moment.utc(comment.creation_date_time).toDate()),
-                     momentDateTime: moment.utc(comment.creation_date_time)
-                  }
-               }));
-
-            //
-            // Sort by date. Most recent dates at the top.
-            //
-            recentActivity.sort(function(item1, item2) {
-               let diff = item1.momentDateTime.diff(item2.momentDateTime)
-               if (diff > 1) {
-                  return -1;
-               } else if (diff < 1) {
-                  return 1;
-               } else {
-                  return 0;
-               }
-            });
-
-            //
-            // Remove the temp "momentDateTime" we added to each item and used for sorting.
-            //
-            recentActivity = recentActivity.map(item => {
-               return omit(item, 'momentDateTime');
-            });
-
-            //
-            // Constrain the list to the limit passed in.
-            //
-            recentActivity.length = Math.min(recentActivity.length, limit);
-
-            return resolve(recentActivity);
-         }).catch(function(err) {
-            return reject(err);
-         });
-      });
-   },
-
-   /**
-    * Returns a the community's discussion categories.
-    * 
-    * @param {number} communityId - The id of the community.
-    *
-    * @return {Promise} A promise that returns a collection {Model} containing the categories.
-    */
-   categories(communityId) {
-      return DiscussionCategory.collection().query(function(q) {
-         q.where('community_id', '=', communityId).orderBy("name", "asc")
-      }).fetch();
-   },
-
-   /**
-    * Creates a new discussion in the database.
-    * 
-    * @param {number} communityId - The id of the community.
-    * @param {number} postedByUserId - The id of the user who created the discussion.
-    * @param {string} title - The title of the post.
-    * @param {string} body - The body of the post.
-    * @param {number} discussionCategoryId - The database id of the row representing the category for the discussion.
-    *
-    * @return {Promise} A promise that returns a {Model} containing the newly created discussion (and its unique id).
-    */
-   createDiscussion(communityId, postedByUserId, title, body, discussionCategoryId) {
-      return dbInsert({
-         '_modelName': MAIN_MODEL,
-         discussion_category_id: discussionCategoryId,
-         title: title,
-         body: body,
-         posted_by_user_id: postedByUserId,
-         community_id: communityId
-      });
-   },
-
-   /**
-    * Updates an existing discussion in the database.
-    * 
-    * @param {number} communityId - The id of the community.
-    * @param {number} postedByUserId - The id of the user who created the discussion.
-    * @param {number} discussionId - The id of the discussion to update.
-    * @param {string} title - The title of the post.
-    * @param {string} body - The body of the post.
-    * @param {number} discussionCategoryId - The database id of the row representing the category for the discussion.
-    *
-    * @return {Promise} A promise that returns a {Model} containing the updated discussion.
-    */
-   updateDiscussion(communityId, postedByUserId, discussionId, title, body, discussionCategoryId) {
-      return dbUpdate({
-         '_modelName': MAIN_MODEL, // Model 
-         discussion_id: discussionId, // Where...
-         // Values to update...
-         discussion_category_id: discussionCategoryId,
-         title: title,
-         body: body
-      });
-   },
-
-
-   /**
-    * Deletes an existing discussion (and its comments) from the database.
-    * 
-    * @param {number} discussionId - The id of the discussion to delete.
-    *
-    * @return {Promise} A promise with an empty success value if everything goes well.
-    */
-   deleteDiscussion(discussionId) {
-      return dbTransaction(function(tx) {
-         return dbGetOne(MAIN_MODEL, [
-            ['discussion_id', '=', discussionId]
-         ], {
-            withRelated: ['comments']
-         }, tx)
-
-         //
-         // First, delete the comments.
-         //
-
-         .then(function(discussion) {
-            return discussion.related('comments').invokeThen('destroy')
-         })
-
-         //
-         // Then, delete the discussion.
-         //
-
-         .then(function() {
-            return dbDelete({
-               '_modelName': MAIN_MODEL,
-               discussion_id: discussionId
-            }, tx)
-         })
-      });
-   },
-
-   /**
-    * Creates a new discussion comment in the database.
-    * 
-    * @param {number} postedByUserId - The id of the user who created the comment.
-    * @param {number} discussionId - The id of the discussion for which this is a comment.
-    * @param {string} commentBody - The comment's text.
-    *
-    * @return {Promise} A promise that returns a {Model} containing the newly created discussion comment (and its unique id).
-    */
-   createDiscussionComment(postedByUserId, discussionId, commentBody) {
-      return dbTransaction(function(tx) {
-         let comment = null;
-
-         //
-         // First, create a comment.
-         //
-
-         return dbInsert({
-            '_modelName': COMMENT_MODEL,
-            discussion_id: discussionId,
-            body: commentBody,
-            posted_by_user_id: postedByUserId
-         }, tx)
-
-         //
-         // Then get the discussion the comment is for...
-         //
-
-         .then(function(row) {
-            comment = row;
-            return dbGetOne(MAIN_MODEL, [
-               ['discussion_id', '=', discussionId]
-            ])
-         })
-
-         //
-         // Then increment the comment_count of the discussion by one.
-         //
-
-         .then(function(discussion) {
-               let commentCount = discussion.toJSON().comment_count + 1;
-               return dbUpdate({
-                  '_modelName': MAIN_MODEL,
-                  discussion_id: discussionId,
-                  comment_count: commentCount
-               }, tx);
-            })
-            .then(function(updatedDiscussion) {
-               return Promise.resolve(comment);
-            })
-      });
-   },
 
    /**
     * Deletes an existing discussion comment from the database.
@@ -612,4 +406,5 @@ module.exports = {
          })
       });
    }
+   
 }

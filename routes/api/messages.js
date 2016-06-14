@@ -71,6 +71,27 @@ router.get('/inbox/:messageId/replies', function(req, res, next) {
     next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
 });
 
+/**
+ * Send a message.
+ *
+ * Example Url POST: /api/messages/outbox
+ */
+router.post('/outbox', function(req, res, next) {
+
+    let communityId = req.communityId;
+    let userId = req.userId;
+
+    let subject = req.body.subject; 
+    let body = req.body.body; 
+    let to = req.body.to; 
+
+    MessagesDS.sendMessage(communityId,userId,to,subject,body).then(function(message) {
+        res.json(message);
+    }).catch( err => {
+        next(err) 
+    });
+});
+
 
 /**
  * Reply to an inbox message.
@@ -102,6 +123,7 @@ router.delete('/inbox/:messageId', function(req, res, next) {
 });
 
 
+
 /**
  * Retrieve list of sent messages.
  *
@@ -122,16 +144,6 @@ router.get('/outbox', function(req, res, next) {
 });
 
 
-/**
- * Send a message.
- *
- * Example Url POST: /api/messages/outbox
- */
-router.post('/outbox', function(req, res, next) {
-
-
-    next(new NotImplementedError(req.protocol + '://' + req.get('host') + req.originalUrl))
-});
 
 
 /**

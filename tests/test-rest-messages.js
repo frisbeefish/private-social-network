@@ -51,6 +51,23 @@ describe('Messages', function() {
         });
     });
 
+    let messageId = null;
+
+    it('- send message', function(done) {
+        httputils.postJson('/api/messages/outbox', {
+            subject:'TEST Hi this is a message from test',
+            body:'Hi this is the body',
+            to:[2,140] // Charmian and support
+        }, function(err, res, body) {
+            expect(res.statusCode).to.equal(200);
+            console.log('CREATED THIS MESSAGE: ' + body);
+            messageId = body.id;
+            console.log('WITH ID: ' + messageId);
+            done();
+        });
+    });
+
+
     it('- get replies to one inbox message', function(done) {
         httputils.get('/api/messages/inbox/123/replies', function(err, res, body) {
             expect(res.statusCode).to.equal(404);
@@ -101,13 +118,6 @@ describe('Messages', function() {
         });
     });
 
-    it('- send message', function(done) {
-        httputils.postJson('/api/messages/outbox', {}, function(err, res, body) {
-            expect(res.statusCode).to.equal(404);
-            expect(res.body.message).to.include('Not Implemented');
-            done();
-        });
-    });
 
     it('- delete outbox message', function(done) {
         httputils.deleteJson('/api/messages/outbox/123', {}, function(err, res, body) {
